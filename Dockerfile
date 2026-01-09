@@ -15,8 +15,8 @@ WORKDIR /opt/keycloak
 # here is the workaround to enable json logs on Cloud Logging
 ADD server/conf/quarkus.properties /opt/keycloak/conf
 
-RUN /opt/keycloak/bin/kc.sh build --feature-kubernetes-service-accounts=enabled --feature-spiffe=enabled
-
+#RUN /opt/keycloak/bin/kc.sh build --feature-kubernetes-service-accounts=enabled --feature-spiffe=enabled --features=jwt-authorization-grant 
+RUN /opt/keycloak/bin/kc.sh build --features=preview
 
 # Final image
 FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}

@@ -4,11 +4,7 @@ provider "google" {
 }
 
 
-resource "google_project_service" "secretmanager" {
-  service = "secretmanager.googleapis.com"
-  disable_on_destroy = false
-}
-
+###
 # Artifact Registry Remote Repository
 resource "google_artifact_registry_repository" "github_proxy" {
   location      = var.region
@@ -25,6 +21,7 @@ resource "google_artifact_registry_repository" "github_proxy" {
     }
   }
 }
+
 
 ###
 # VPC Connector
@@ -137,7 +134,7 @@ resource "google_cloud_run_service" "default" {
       
       containers {
         image = "${var.region}-docker.pkg.dev/${var.project_id}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
-        args = ["start", "--optimized", "--health-enabled=true", "--feature-kubernetes-service-accounts=enabled", "--feature-spiffe=enabled"]
+        args = ["start", "--optimized", "--features=preview"]
 
         ports {
           name           = "http1"
