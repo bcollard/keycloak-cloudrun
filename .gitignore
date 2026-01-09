@@ -1,1 +1,3 @@
 .lego
+tf-state-backend-kong-scripts.json
+values.tfvars

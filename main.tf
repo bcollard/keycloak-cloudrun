@@ -1,17 +1,9 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 4.0"
-    }
-  }
-}
-
 provider "google" {
   project = var.project_id
   region  = var.region
 }
 
+###
 # Enable necessary APIs
 resource "google_project_service" "run" {
   service = "run.googleapis.com"
@@ -33,22 +25,11 @@ resource "google_project_service" "secretmanager" {
   disable_on_destroy = false
 }
 
-# Artifact Registry
-resource "google_artifact_registry_repository" "repo" {
-  location      = var.region
-  repository_id = "cloud-run-keycloak"
-  description   = "Docker repository for Keycloak"
-  format        = "DOCKER"
-}
 
-resource "google_project_service" "secretmanager" {
-  service = "secretmanager.googleapis.com"
-  disable_on_destroy = false
-}
-
+###
 # Cloud SQL
 resource "google_sql_database_instance" "instance" {
-  name             = "keycloak-db-instance-${random_id.db_name_suffix.hex}"
+  name             = "keycloak-cloud-run-postgres-db"
   region           = var.region
   database_version = "POSTGRES_15"
   
@@ -64,10 +45,6 @@ resource "google_sql_database_instance" "instance" {
   depends_on          = [google_project_service.sqladmin]
 }
 
-resource "random_id" "db_name_suffix" {
-  byte_length = 4
-}
-
 resource "google_sql_database" "database" {
   name     = "keycloak"
   instance = google_sql_database_instance.instance.name
@@ -79,9 +56,11 @@ resource "google_sql_user" "users" {
   password = var.db_password
 }
 
+
+###
 # Secrets
 resource "google_secret_manager_secret" "db_password" {
-  secret_id = "KC_DB_PASSWORD"
+  secret_id = "keycloak-kong-runlocal-dev-db-pwd"
   replication {
     auto {}
   }
@@ -93,21 +72,8 @@ resource "google_secret_manager_secret_version" "db_password_version" {
   secret_data = var.db_password
 }
 
-resource "google_secret_manager_secret" "keycloak_admin" {
-  secret_id = "KEYCLOAK_ADMIN"
-  replication {
-    auto {}
-  }
-  depends_on = [google_project_service.secretmanager]
-}
-
-resource "google_secret_manager_secret_version" "keycloak_admin_version" {
-  secret      = google_secret_manager_secret.keycloak_admin.id
-  secret_data = var.keycloak_admin
-}
-
 resource "google_secret_manager_secret" "keycloak_admin_password" {
-  secret_id = "KEYCLOAK_ADMIN_PASSWORD"
+  secret_id = "keycloak-kong-runlocal-dev-kc-admin-pwd"
   replication {
     auto {}
   }
@@ -119,18 +85,14 @@ resource "google_secret_manager_secret_version" "keycloak_admin_password_version
   secret_data = var.keycloak_admin_password
 }
 
+
+###
 # IAM for Cloud Run
 data "google_compute_default_service_account" "default" {
 }
 
 resource "google_secret_manager_secret_iam_member" "secret_access_db" {
   secret_id = google_secret_manager_secret.db_password.id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${data.google_compute_default_service_account.default.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "secret_access_admin" {
-  secret_id = google_secret_manager_secret.keycloak_admin.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${data.google_compute_default_service_account.default.email}"
 }
@@ -147,6 +109,8 @@ resource "google_project_iam_member" "cloudsql_client" {
   member  = "serviceAccount:${data.google_compute_default_service_account.default.email}"
 }
 
+
+###
 # Cloud Run Service
 resource "google_cloud_run_service" "default" {
   name     = "kong-keycloak-on-cloudrun"
