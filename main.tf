@@ -137,7 +137,7 @@ resource "google_cloud_run_service" "default" {
       
       containers {
         image = "${var.region}-docker.pkg.dev/${var.project_id}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
-        args = ["start", "--optimized"]
+        args = ["start", "--optimized", "--health-enabled=true", "--feature-kubernetes-service-accounts=enabled", "--feature-spiffe=enabled"]
 
         ports {
           name           = "http1"
@@ -152,12 +152,11 @@ resource "google_cloud_run_service" "default" {
         }
 
         startup_probe {
-          initial_delay_seconds = 21
+          initial_delay_seconds = 45
           timeout_seconds       = 5
           period_seconds        = 10
           failure_threshold     = 3
-          http_get {
-            path = "/health"
+          tcp_socket {
             port = 8080
           }
         }
@@ -185,10 +184,6 @@ resource "google_cloud_run_service" "default" {
         env {
           name  = "KC_HTTP_ENABLED"
           value = "true"
-        }
-        env {
-          name  = "KC_PROXY"
-          value = "edge"
         }
 
         # Secrets
