@@ -1,5 +1,5 @@
 # You can easily repackage Keycloak with a latest version by using this arg during the docker build
-ARG KEYCLOAK_VERSION=24.0.2
+ARG KEYCLOAK_VERSION=26.2
 
 # See https://www.keycloak.org/server/containers
 FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} as builder

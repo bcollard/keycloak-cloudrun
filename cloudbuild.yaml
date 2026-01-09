@@ -4,7 +4,7 @@ steps:
 #    entrypoint: mvn
 #    args: [ '-pl','kc-extensions','-amd','clean','package' ]
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '--build-arg', 'KEYCLOAK_VERSION=${_KEYCLOAK_VERSION}', '-t', '${_IMAGE_PATH_SHA}', '.']
+    args: ['build', '--build-arg', 'KEYCLOAK_VERSION=${_KEYCLOAK_VERSION}', '-t', '${_IMAGE_PATH_SHA}', '-t', 'europe-west9-docker.pkg.dev/${PROJECT_ID}/cloud-run-keycloak/${_IMAGE_NAME}:latest', '.']
   # Automatically build and Deploy container image to Cloud Run
 #  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
 #    entrypoint: gcloud
@@ -12,9 +12,10 @@ steps:
 substitutions:
   _IMAGE_NAME: 'kong-keycloak-on-cloudrun'
   _IMAGE_PATH_SHA: 'europe-west9-docker.pkg.dev/${PROJECT_ID}/cloud-run-keycloak/${_IMAGE_NAME}:${SHORT_SHA}'
-  _KEYCLOAK_VERSION: 24.0.2
+  _KEYCLOAK_VERSION: 26.2
 images:
   - '${_IMAGE_PATH_SHA}'
+  - 'europe-west9-docker.pkg.dev/${PROJECT_ID}/cloud-run-keycloak/${_IMAGE_NAME}:latest'
 
 options:
   dynamic_substitutions: true
