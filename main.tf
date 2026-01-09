@@ -3,26 +3,36 @@ provider "google" {
   region  = var.region
 }
 
-###
-# Enable necessary APIs
-resource "google_project_service" "run" {
-  service = "run.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_project_service" "sqladmin" {
-  service = "sqladmin.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_project_service" "vpcaccess" {
-  service = "vpcaccess.googleapis.com"
-  disable_on_destroy = false
-}
 
 resource "google_project_service" "secretmanager" {
   service = "secretmanager.googleapis.com"
   disable_on_destroy = false
+}
+
+# Artifact Registry Remote Repository
+resource "google_artifact_registry_repository" "github_proxy" {
+  location      = var.region
+  repository_id = "github-proxy"
+  description   = "GitHub Container Registry Proxy"
+  format        = "DOCKER"
+  mode          = "REMOTE_REPOSITORY"
+  remote_repository_config {
+    description = "GitHub Container Registry"
+    docker_repository {
+      custom_repository {
+        uri = "https://ghcr.io"
+      }
+    }
+  }
+}
+
+###
+# VPC Connector
+resource "google_vpc_access_connector" "connector" {
+  name          = "keycloak-cloud-run-to-sql"
+  region        = var.region
+  ip_cidr_range = "10.8.240.0/28"
+  network       = "default"
 }
 
 
@@ -36,13 +46,17 @@ resource "google_sql_database_instance" "instance" {
   settings {
     tier = "db-f1-micro"
     ip_configuration {
-      ipv4_enabled    = true # Enable public IP for easier access/debugging as per blog
       private_network = "projects/${var.project_id}/global/networks/default"
+      ipv4_enabled    = false
     }
+    maintenance_window {
+      day = 1
+      hour = 0
+    }
+    deletion_protection_enabled = true
   }
 
-  deletion_protection = false # For demo purposes
-  depends_on          = [google_project_service.sqladmin]
+  deletion_protection = true
 }
 
 resource "google_sql_database" "database" {
@@ -53,7 +67,7 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "users" {
   name     = "keycloak-cloud-run"
   instance = google_sql_database_instance.instance.name
-  password = var.db_password
+  # password = var.db_password
 }
 
 
@@ -64,7 +78,6 @@ resource "google_secret_manager_secret" "db_password" {
   replication {
     auto {}
   }
-  depends_on = [google_project_service.secretmanager]
 }
 
 resource "google_secret_manager_secret_version" "db_password_version" {
@@ -77,7 +90,6 @@ resource "google_secret_manager_secret" "keycloak_admin_password" {
   replication {
     auto {}
   }
-  depends_on = [google_project_service.secretmanager]
 }
 
 resource "google_secret_manager_secret_version" "keycloak_admin_password_version" {
@@ -88,25 +100,27 @@ resource "google_secret_manager_secret_version" "keycloak_admin_password_version
 
 ###
 # IAM for Cloud Run
-data "google_compute_default_service_account" "default" {
+resource "google_service_account" "keycloak_sa" {
+  account_id   = "kong-keycloak-on-cloudrun"
+  display_name = "Service Account for Keycloak on Cloud Run"
 }
 
 resource "google_secret_manager_secret_iam_member" "secret_access_db" {
   secret_id = google_secret_manager_secret.db_password.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${data.google_compute_default_service_account.default.email}"
+  member    = "serviceAccount:${google_service_account.keycloak_sa.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "secret_access_admin_pwd" {
   secret_id = google_secret_manager_secret.keycloak_admin_password.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${data.google_compute_default_service_account.default.email}"
+  member    = "serviceAccount:${google_service_account.keycloak_sa.email}"
 }
 
-resource "google_project_iam_member" "cloudsql_client" {
+resource "google_project_iam_member" "artifact_registry_reader" {
   project = var.project_id
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${data.google_compute_default_service_account.default.email}"
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.keycloak_sa.email}"
 }
 
 
@@ -122,8 +136,7 @@ resource "google_cloud_run_service" "default" {
       timeout_seconds       = 60
       
       containers {
-        image = "ghcr.io/bcollard/keycloak-cloudrun:${var.keycloak_version}" 
-        
+        image = "${var.region}-docker.pkg.dev/${var.project_id}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
         args = ["start", "--optimized"]
 
         ports {
@@ -139,7 +152,7 @@ resource "google_cloud_run_service" "default" {
         }
 
         startup_probe {
-          initial_delay_seconds = 20
+          initial_delay_seconds = 21
           timeout_seconds       = 5
           period_seconds        = 10
           failure_threshold     = 3
@@ -173,29 +186,6 @@ resource "google_cloud_run_service" "default" {
           name  = "KC_HTTP_ENABLED"
           value = "true"
         }
-        
-        # Kept these from original config as they might be needed for the specific image/setup
-        # even if not explicitly in the dump env list (which might be truncated or defaults)
-        env {
-          name  = "KC_DB_URL_DATABASE"
-          value = "keycloak"
-        }
-        env {
-          name  = "KC_DB_URL_PORT"
-          value = "5432"
-        }
-        env {
-          name  = "KC_DB"
-          value = "postgres"
-        }
-        env {
-          name  = "KC_DB_SCHEMA"
-          value = "public"
-        }
-        env {
-          name  = "KC_LOG_CONSOLE_OUTPUT"
-          value = "json"
-        }
         env {
           name  = "KC_PROXY"
           value = "edge"
@@ -222,20 +212,20 @@ resource "google_cloud_run_service" "default" {
         }
       }
       
-      service_account_name = data.google_compute_default_service_account.default.email
+      service_account_name = google_service_account.keycloak_sa.email
     }
 
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector"    = google_vpc_access_connector.connector.name
+        "run.googleapis.com/vpc-access-connector"    = "projects/${var.project_id}/locations/${var.region}/connectors/${google_vpc_access_connector.connector.name}"
         "run.googleapis.com/cloudsql-instances"      = google_sql_database_instance.instance.connection_name
+        "run.googleapis.com/client-name"             = "cloud-console"
         "autoscaling.knative.dev/minScale"           = "1"
         "autoscaling.knative.dev/maxScale"           = "1"
         "run.googleapis.com/startup-cpu-boost"       = "true"
         "run.googleapis.com/execution-environment"   = "gen2"
         "run.googleapis.com/sessionAffinity"         = "true"
         "run.googleapis.com/vpc-access-egress"       = "private-ranges-only"
-        "run.googleapis.com/ingress"                 = "internal-and-cloud-load-balancing"
       }
     }
   }
@@ -244,8 +234,6 @@ resource "google_cloud_run_service" "default" {
     percent         = 100
     latest_revision = true
   }
-
-  depends_on = [google_project_service.run]
 }
 
 # Allow unauthenticated invocations

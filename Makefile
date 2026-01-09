@@ -26,13 +26,13 @@ tfi: ## init Terraform
 
 tfp: ## plan Terraform
 	@echo "Planning Terraform..."
-	@terraform plan -var-file=./values.tfvars -var-file=./clusters.tfvars
+	@terraform plan -var-file=./values.tfvars
 
 tfa: ## apply Terraform
 	@echo "Applying Terraform..."
-	@terraform apply -var-file=./values.tfvars -var-file=./clusters.tfvars
+	@terraform apply -var-file=./values.tfvars
 
 tfd: ## destroy Terraform
 	@echo "Destroying Terraform..."
-	@terraform destroy -var-file=./values.tfvars -var-file=./clusters.tfvars
+	@terraform destroy -var-file=./values.tfvars
 

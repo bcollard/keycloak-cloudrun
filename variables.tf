@@ -1,3 +1,13 @@
+variable "account_name" {
+  description = "Name of the Konnect account"
+  type        = string
+}
+variable "project_name" {
+  description = "Name of the project in Konnect"
+  type        = string
+}
+
+
 variable "project_id" {
   description = "The GCP project ID"
   type        = string
