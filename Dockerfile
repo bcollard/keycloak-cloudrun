@@ -2,7 +2,7 @@
 ARG KEYCLOAK_VERSION=26.2
 
 # See https://www.keycloak.org/server/containers
-FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} as builder
+FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
@@ -15,7 +15,7 @@ WORKDIR /opt/keycloak
 # here is the workaround to enable json logs on Cloud Logging
 ADD server/conf/quarkus.properties /opt/keycloak/conf
 
-#RUN /opt/keycloak/bin/kc.sh build --feature-kubernetes-service-accounts=enabled --feature-spiffe=enabled --features=jwt-authorization-grant 
+# Keycloak v26.5 comes with preview of capabilities on grants like kubernetes-service-accounts, spiffe, and jwt-authorization-grant
 RUN /opt/keycloak/bin/kc.sh build --features=preview
 
 # Final image

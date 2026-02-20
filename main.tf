@@ -149,7 +149,7 @@ resource "google_cloud_run_service" "default" {
         }
 
         startup_probe {
-          initial_delay_seconds = 45
+          initial_delay_seconds = 46
           timeout_seconds       = 5
           period_seconds        = 10
           failure_threshold     = 3
