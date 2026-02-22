@@ -1,6 +1,7 @@
 .lego
 tf-state-backend-kong-scripts.json
 *.tfvars
+*.auto.tfvars
 *.tfstate
 backup/
 .terraform/
