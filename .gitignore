@@ -4,3 +4,4 @@ values.tfvars
 .terraform/
 .terraform.lock.hcl
 
+backup/

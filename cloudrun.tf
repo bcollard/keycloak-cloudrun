@@ -1,9 +1,3 @@
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-
 ###
 # Artifact Registry Remote Repository
 resource "google_artifact_registry_repository" "github_proxy" {

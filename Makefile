@@ -16,23 +16,19 @@ gcloud-login: ## Authenticate with Google Cloud (User and Application Default)
 	@gcloud config configurations activate kong
 	@gcloud auth application-default login
 
-tfv: ## initialize Terraform variables (.tfvars file)
-	@echo "Initializing the .tfvars file..."
-	./init-tf-scripts.sh
-
 tfi: ## init Terraform
 	@echo "Initializing Terraform..."
 	@terraform init
 
 tfp: ## plan Terraform
 	@echo "Planning Terraform..."
-	@terraform plan -var-file=./values.tfvars
+	@terraform plan
 
 tfa: ## apply Terraform
 	@echo "Applying Terraform..."
-	@terraform apply -var-file=./values.tfvars
+	@terraform apply
 
 tfd: ## destroy Terraform
 	@echo "Destroying Terraform..."
-	@terraform destroy -var-file=./values.tfvars
+	@terraform destroy
 
