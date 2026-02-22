@@ -3,15 +3,16 @@ name: Build and Push Keycloak to GHCR
 on:
   push:
     branches: [ "main" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    paths:
+      - "KEYCLOAK_VERSION"
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "KEYCLOAK_VERSION"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }} # This will be owner/repo
-  KEYCLOAK_VERSION: 26.5.4
 
 jobs:
   build:
@@ -49,6 +50,20 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read Keycloak version
+        run: |
+          set -euo pipefail
+          if [[ ! -f KEYCLOAK_VERSION ]]; then
+            echo "KEYCLOAK_VERSION file not found" >&2
+            exit 1
+          fi
+          VERSION=$(tr -d ' \t\r\n' < KEYCLOAK_VERSION)
+          if [[ -z "$VERSION" ]]; then
+            echo "KEYCLOAK_VERSION file is empty" >&2
+            exit 1
+          fi
+          echo "KEYCLOAK_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Extract Docker metadata
         id: meta
