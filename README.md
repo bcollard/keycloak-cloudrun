@@ -204,12 +204,10 @@ To use VSCode with Model Context Protocol (MCP) via Keycloak:
 |------|---------|
 | `terraform.tf` | Terraform configuration & remote GCS backend |
 | `variables.tf` | Variable definitions for GCP resources |
-| `values.auto.tfvars` | Variable values (GCP project, region, etc.) |
 | `cloudrun.tf` | Cloud Run service deployment |
 | `load-balancer.tf` | Global Load Balancer & networking |
 | `tf-provider-google.tf` | Google provider configuration |
 | `tf-imports.sh` | Script for importing existing resources |
-| `merge-tf-projects.sh` | Script for merging multiple state files |
 
 ## Terraform Operations
 
@@ -255,21 +253,6 @@ terraform state show <resource_name>
 If you see: `Timeout sec is not supported for a backend service with Serverless network endpoint groups`
 
 **Solution:** Remove `timeout_sec` from the backend service configuration (already fixed in this repo). Serverless backends don't support custom timeouts.
-
-### Terraform State Issues
-
-When working with multiple state files:
-
-```bash
-# List resources from specific state file
-terraform state list -state=kc-glb.tfstate
-
-# Show specific resource
-terraform state show -state=kc-glb.tfstate google_compute_backend_service.main
-
-# Merge state files (use the provided script)
-./merge-tf-projects.sh
-```
 
 ## State Management
 
