@@ -1,11 +1,3 @@
-variable "account_name" {
-  description = "Name of the Konnect account"
-  type        = string
-}
-variable "project_name" {
-  description = "Name of the project in Konnect"
-  type        = string
-}
 
 
 # GCP
@@ -27,17 +19,6 @@ variable "gcp_zone" {
   default     = "europe-west4-b"
 }
 
-
-variable "project_id" {
-  description = "The GCP project ID"
-  type        = string
-}
-
-variable "region" {
-  description = "The GCP region"
-  type        = string
-  default     = "europe-west9"
-}
 
 variable "keycloak_version" {
   description = "The version of Keycloak to deploy"
@@ -85,11 +66,6 @@ variable "forwarding_rule_ip_address" {
 
 variable "backend_service_name" {
   description = "Name of the backend service"
-  type        = string
-}
-
-variable "backend_service_endpoint" {
-  description = "Backend service endpoint NEG"
   type        = string
 }
 

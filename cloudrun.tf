@@ -1,7 +1,7 @@
 ###
 # Artifact Registry Remote Repository
 resource "google_artifact_registry_repository" "github_proxy" {
-  location      = var.region
+  location      = var.gcp_region
   repository_id = "github-proxy"
   description   = "GitHub Container Registry Proxy"
   format        = "DOCKER"
@@ -21,7 +21,7 @@ resource "google_artifact_registry_repository" "github_proxy" {
 # VPC Connector
 resource "google_vpc_access_connector" "connector" {
   name          = "keycloak-cloud-run-to-sql"
-  region        = var.region
+  region        = var.gcp_region
   ip_cidr_range = "10.8.240.0/28"
   network       = "default"
 }
@@ -31,13 +31,13 @@ resource "google_vpc_access_connector" "connector" {
 # Cloud SQL
 resource "google_sql_database_instance" "instance" {
   name             = "keycloak-cloud-run-postgres-db"
-  region           = var.region
+  region           = var.gcp_region
   database_version = "POSTGRES_15"
   
   settings {
     tier = "db-f1-micro"
     ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
+      private_network = "projects/${var.gcp_project}/global/networks/default"
       ipv4_enabled    = false
     }
     maintenance_window {
@@ -65,7 +65,7 @@ resource "google_sql_user" "users" {
 ###
 # Secrets
 resource "google_secret_manager_secret" "db_password" {
-  secret_id = "keycloak-kong-runlocal-dev-db-pwd"
+  secret_id = "keycloak-db-pwd"
   replication {
     auto {}
   }
@@ -77,7 +77,7 @@ resource "google_secret_manager_secret_version" "db_password_version" {
 }
 
 resource "google_secret_manager_secret" "keycloak_admin_password" {
-  secret_id = "keycloak-kong-runlocal-dev-kc-admin-pwd"
+  secret_id = "keycloak-kc-admin-pwd"
   replication {
     auto {}
   }
@@ -109,7 +109,7 @@ resource "google_secret_manager_secret_iam_member" "secret_access_admin_pwd" {
 }
 
 resource "google_project_iam_member" "artifact_registry_reader" {
-  project = var.project_id
+  project = var.gcp_project
   role    = "roles/artifactregistry.reader"
   member  = "serviceAccount:${google_service_account.keycloak_sa.email}"
 }
@@ -119,7 +119,7 @@ resource "google_project_iam_member" "artifact_registry_reader" {
 # Cloud Run Service
 resource "google_cloud_run_service" "default" {
   name     = "kong-keycloak-on-cloudrun"
-  location = var.region
+  location = var.gcp_region
 
   template {
     spec {
@@ -127,7 +127,7 @@ resource "google_cloud_run_service" "default" {
       timeout_seconds       = 60
       
       containers {
-        image = "${var.region}-docker.pkg.dev/${var.project_id}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
         args = ["start", "--optimized", "--features=preview"]
 
         ports {
@@ -162,7 +162,7 @@ resource "google_cloud_run_service" "default" {
         }
         env {
           name  = "KC_HOSTNAME"
-          value = "keycloak.kong.runlocal.dev"
+          value = var.keycloak_hostname
         }
         env {
           name  = "KEYCLOAK_ADMIN"
@@ -203,7 +203,7 @@ resource "google_cloud_run_service" "default" {
 
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector"    = "projects/${var.project_id}/locations/${var.region}/connectors/${google_vpc_access_connector.connector.name}"
+        "run.googleapis.com/vpc-access-connector"    = "projects/${var.gcp_project}/locations/${var.gcp_region}/connectors/${google_vpc_access_connector.connector.name}"
         "run.googleapis.com/cloudsql-instances"      = google_sql_database_instance.instance.connection_name
         "run.googleapis.com/client-name"             = "cloud-console"
         "autoscaling.knative.dev/minScale"           = "1"

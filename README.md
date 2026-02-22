@@ -15,7 +15,7 @@ A complete infrastructure-as-code deployment of Keycloak on Google Cloud Run wit
 ## Architecture
 
 ```
-keycloak.kong.runlocal.dev
+<keycloak domain name>
         ↓
     DNS (GCP Private)
         ↓
@@ -81,7 +81,7 @@ Deploys all infrastructure. When prompted, review the changes and type `yes` to 
 
 ### 5. Verify Deployment
 
-Access Keycloak at: `https://keycloak.kong.runlocal.dev`
+Access Keycloak at: `https://${var.keycloak_hostname}`
 
 ## Infrastructure Components
 
@@ -91,7 +91,7 @@ Access Keycloak at: `https://keycloak.kong.runlocal.dev`
 - Instance: `keycloak-cloud-run-postgres-db`
 - Database: `keycloak`
 - User: `keycloak-cloud-run`
-- Password: Stored in Google Secret Manager as `keycloak-kong-runlocal-dev-db-pwd`
+- Password: Stored in Google Secret Manager as `keycloak-db-pwd`
 
 **Access:**
 - Managed by Terraform
@@ -116,8 +116,8 @@ Access Keycloak at: `https://keycloak.kong.runlocal.dev`
 **Configuration:**
 - Backend Service: `keycloak-cloud-run` (serverless backend)
 - URL Map: `baptiste-glb-http`
-- SSL Certificate: `wildcard-kong-runlocal-dev-2026-01`
-- Forwarding Rule: `keycloak-kong-runlocal-dev`
+- SSL Certificate: `wildcard-${var.keycloak_hostname}-2026-01`
+- Forwarding Rule: `keycloak-${var.keycloak_hostname}`
 - IP Address: `34.110.159.193` (from outputs)
 
 **File:** `load-balancer.tf`
@@ -147,9 +147,9 @@ This project builds a custom Keycloak Docker image optimized for Cloud Run.
 
 ### Accessing Admin Console
 
-1. Navigate to: `https://keycloak.kong.runlocal.dev/admin`
+1. Navigate to: `https://${var.keycloak_hostname}/admin`
 2. Login with admin credentials from Google Secret Manager
-3. Retrieve via: `gcloud secrets versions access latest --secret="keycloak-kong-runlocal-dev-kc-admin-pwd"`
+3. Retrieve via: `gcloud secrets versions access latest --secret="keycloak-kc-admin-pwd"`
 
 ## Advanced Features
 

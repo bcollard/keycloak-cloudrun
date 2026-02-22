@@ -177,7 +177,7 @@ resource "google_compute_backend_service" "main" {
   service_lb_policy                 = null
 
   backend {
-    group                        = var.backend_service_endpoint
+    group                        = "https://www.googleapis.com/compute/v1/projects/${var.gcp_project}/regions/${var.gcp_region}/networkEndpointGroups/${var.backend_service_name}"
     balancing_mode               = "UTILIZATION"
     capacity_scaler              = 1
     description                  = null

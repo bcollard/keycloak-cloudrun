@@ -1,14 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
 
-# VARS
-export GCP_PROJECT=personal-218506
-export GCP_CREDENTIALS_FILE=/Users/baptiste.collard@konghq.com/projects/private/kind-on-lima/credentials.json
-
+: "${DNS_ZONE_NAME:?DNS_ZONE_NAME must be set}"
+: "${GCP_PROJECT_DNS:?GCP_PROJECT_DNS must be set}"
+: "${GCP_CREDENTIALS_FILE:?GCP_CREDENTIALS_FILE must be set}"
 
 ##################################
 # Wildcard certificate
 # with the lego CLI
 ##################################
-GCE_PROJECT=$GCP_PROJECT \
-GCE_SERVICE_ACCOUNT_FILE=$GCP_CREDENTIALS_FILE \
+GCE_PROJECT="$GCP_PROJECT_DNS" \
+GCE_SERVICE_ACCOUNT_FILE="$GCP_CREDENTIALS_FILE" \
 lego --email baptiste.collard@gmail.com --dns gcloud -d "*.${DNS_ZONE_NAME}" -a run
 

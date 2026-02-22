@@ -1,12 +1,7 @@
 # Makefile for Keycloak on Cloud Run with Terraform
 .ONESHELL:
 .DEFAULT_GOAL := help
-.PHONY: help gcloud-login tfv tfi tfp tfa tfd
-
-# Configuration
-REGION ?= europe-west9
-BRANCH ?= main
-
+.PHONY: help gcloud-login tfv tfi tfp tfa tfd server-cert
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -31,4 +26,8 @@ tfa: ## apply Terraform
 tfd: ## destroy Terraform
 	@echo "Destroying Terraform..."
 	@terraform destroy
+
+server-cert: ## exec glb-wildcard-cert.sh to create a wildcard certificate for the load balancer (requires DNS_ZONE_NAME, GCP_PROJECT_DNS, GCP_CREDENTIALS_FILE)
+	@echo "Creating wildcard certificate for load balancer..."; \
+	DNS_ZONE_NAME="$(DNS_ZONE_NAME)" ./glb-wildcard-cert.sh
 
