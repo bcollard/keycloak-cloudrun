@@ -128,7 +128,7 @@ resource "google_cloud_run_service" "default" {
       
       containers {
         image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
-        args = ["start", "--optimized", "--features=preview"]
+        args = ["start", "--optimized", "--features=spiffe:v1"]
 
         ports {
           name           = "http1"
@@ -175,6 +175,10 @@ resource "google_cloud_run_service" "default" {
         env {
           name  = "KC_HTTP_ENABLED"
           value = "true"
+        }
+        env {
+          name  = "KC_LOG_LEVEL"
+          value = var.keycloak_log_level
         }
 
         # Secrets

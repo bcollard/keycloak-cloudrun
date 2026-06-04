@@ -23,7 +23,7 @@ variable "gcp_zone" {
 variable "keycloak_version" {
   description = "The version of Keycloak to deploy"
   type        = string
-  default     = "26.2"
+  default     = "26.6.2"
 }
 
 variable "db_password" {
@@ -87,6 +87,12 @@ variable "ssl_certificate_key_path" {
 variable "keycloak_hostname" {
   description = "Hostname for Keycloak (e.g., keycloak.kong.runlocal.dev)"
   type        = string
+}
+
+variable "keycloak_log_level" {
+  description = "Keycloak log level (e.g., DEBUG, INFO, WARN, ERROR)"
+  type        = string
+  default     = "INFO"
 }
 
 variable "keycloak_admin_header_value" {
