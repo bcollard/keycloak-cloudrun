@@ -153,6 +153,22 @@ This project builds a custom Keycloak Docker image optimized for Cloud Run.
 
 ## Advanced Features
 
+### Feature Flags
+
+This image opts into one preview feature at build time, mirrored in the Cloud
+Run runtime args:
+
+- `Dockerfile`: `kc.sh build --features=spiffe:v1`
+- `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1"]`
+
+The two **must** stay identical — `start --optimized` refuses to run otherwise.
+
+As of Keycloak 26.6, the following flags became default-on (no opt-in needed):
+`token-exchange-standard:v2`, `jwt-authorization-grant:v1`,
+`kubernetes-service-accounts:v1`. The legacy `token-exchange:v1` preview flag
+is deprecated. See https://www.keycloak.org/server/features for the
+authoritative status table.
+
 ### WebAuthn / Passwordless Authentication
 
 **Setup Instructions:**
