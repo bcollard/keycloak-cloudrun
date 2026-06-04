@@ -140,15 +140,14 @@ resource "google_compute_target_https_proxy" "main" {
 
 # SSL Certificate Resource
 resource "google_compute_ssl_certificate" "main" {
-  name        = var.ssl_certificate_name
+  name_prefix = "${var.ssl_certificate_name}-"
   project     = var.gcp_project
   certificate = file(var.ssl_certificate_path)
   private_key = file(var.ssl_certificate_key_path)
   description = null
 
   lifecycle {
-    ignore_changes  = [certificate, private_key]
-    prevent_destroy = true
+    create_before_destroy = true
   }
 }
 
