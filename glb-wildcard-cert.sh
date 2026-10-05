@@ -11,5 +11,5 @@ set -euo pipefail
 ##################################
 GCE_PROJECT="$GCP_PROJECT_DNS" \
 GCE_SERVICE_ACCOUNT_FILE="$GCP_CREDENTIALS_FILE" \
-lego --email baptiste.collard@gmail.com --dns gcloud -d "*.${DNS_ZONE_NAME}" -a run
+lego run --email baptiste.collard@gmail.com --dns gcloud -d "*.${DNS_ZONE_NAME}" --accept-tos --path ./.lego --dns.resolvers 8.8.8.8:53,1.1.1.1:53
 
