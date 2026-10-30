@@ -1,16 +1,14 @@
 terraform {
   required_providers {
     google = {
-      source = "hashicorp/google"
+      source  = "hashicorp/google"
       version = "6.42.0"
     }
   }
 
-  backend "gcs" {
-    bucket  = "tf-state-bco-scripts-kong-gcp"
-    prefix = "terraform/bco/keycloak-cloudrun"
-    credentials = "tf-state-backend-kong-scripts.json"
-  }
+  # Partial configuration: bucket, prefix and credentials come from backend.hcl
+  # (see backend.hcl.example), passed by `make tfi`.
+  backend "gcs" {}
 
   required_version = ">= 1.10"
 }

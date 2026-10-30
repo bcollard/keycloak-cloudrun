@@ -33,7 +33,7 @@ resource "google_sql_database_instance" "instance" {
   name             = "keycloak-cloud-run-postgres-db"
   region           = var.gcp_region
   database_version = "POSTGRES_15"
-  
+
   settings {
     tier = "db-f1-micro"
     ip_configuration {
@@ -41,7 +41,7 @@ resource "google_sql_database_instance" "instance" {
       ipv4_enabled    = false
     }
     maintenance_window {
-      day = 1
+      day  = 1
       hour = 0
     }
     deletion_protection_enabled = true
@@ -58,7 +58,7 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "users" {
   name     = "keycloak-cloud-run"
   instance = google_sql_database_instance.instance.name
-  # password = var.db_password
+  password = var.db_password
 }
 
 
@@ -121,14 +121,22 @@ resource "google_cloud_run_service" "default" {
   name     = "kong-keycloak-on-cloudrun"
   location = var.gcp_region
 
+  metadata {
+    annotations = {
+      # Only the GLB (via the serverless NEG) can reach the service; the
+      # *.run.app URL would otherwise bypass the URL map's /admin header check.
+      "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
+    }
+  }
+
   template {
     spec {
       container_concurrency = 120
       timeout_seconds       = 60
-      
+
       containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"        
-        args = ["start", "--optimized", "--features=spiffe:v1"]
+        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"
+        args  = ["start", "--optimized", "--features=spiffe:v1"]
 
         ports {
           name           = "http1"
@@ -151,22 +159,22 @@ resource "google_cloud_run_service" "default" {
             port = 8080
           }
         }
-        
+
         env {
           name  = "KC_DB_URL_HOST"
           value = google_sql_database_instance.instance.private_ip_address
         }
         env {
           name  = "KC_DB_USERNAME"
-          value = "keycloak-cloud-run"
+          value = google_sql_user.users.name
         }
         env {
           name  = "KC_HOSTNAME"
           value = var.keycloak_hostname
         }
         env {
-          name  = "KEYCLOAK_ADMIN"
-          value = "admin"
+          name  = "KC_BOOTSTRAP_ADMIN_USERNAME"
+          value = var.keycloak_admin
         }
         env {
           name  = "KC_PROXY_HEADERS"
@@ -192,7 +200,7 @@ resource "google_cloud_run_service" "default" {
           }
         }
         env {
-          name = "KEYCLOAK_ADMIN_PASSWORD"
+          name = "KC_BOOTSTRAP_ADMIN_PASSWORD"
           value_from {
             secret_key_ref {
               name = google_secret_manager_secret.keycloak_admin_password.secret_id
@@ -201,21 +209,21 @@ resource "google_cloud_run_service" "default" {
           }
         }
       }
-      
+
       service_account_name = google_service_account.keycloak_sa.email
     }
 
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector"    = "projects/${var.gcp_project}/locations/${var.gcp_region}/connectors/${google_vpc_access_connector.connector.name}"
-        "run.googleapis.com/cloudsql-instances"      = google_sql_database_instance.instance.connection_name
-        "run.googleapis.com/client-name"             = "cloud-console"
-        "autoscaling.knative.dev/minScale"           = "1"
-        "autoscaling.knative.dev/maxScale"           = "1"
-        "run.googleapis.com/startup-cpu-boost"       = "true"
-        "run.googleapis.com/execution-environment"   = "gen2"
-        "run.googleapis.com/sessionAffinity"         = "true"
-        "run.googleapis.com/vpc-access-egress"       = "private-ranges-only"
+        "run.googleapis.com/vpc-access-connector"  = "projects/${var.gcp_project}/locations/${var.gcp_region}/connectors/${google_vpc_access_connector.connector.name}"
+        "run.googleapis.com/cloudsql-instances"    = google_sql_database_instance.instance.connection_name
+        "run.googleapis.com/client-name"           = "cloud-console"
+        "autoscaling.knative.dev/minScale"         = "1"
+        "autoscaling.knative.dev/maxScale"         = "1"
+        "run.googleapis.com/startup-cpu-boost"     = "true"
+        "run.googleapis.com/execution-environment" = "gen2"
+        "run.googleapis.com/sessionAffinity"       = "true"
+        "run.googleapis.com/vpc-access-egress"     = "private-ranges-only"
       }
     }
   }
@@ -226,7 +234,7 @@ resource "google_cloud_run_service" "default" {
   }
 }
 
-# Allow unauthenticated invocations
+# Allow unauthenticated invocations (ingress above limits callers to the GLB)
 resource "google_cloud_run_service_iam_member" "public_access" {
   service  = google_cloud_run_service.default.name
   location = google_cloud_run_service.default.location

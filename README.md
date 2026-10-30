@@ -1,302 +1,163 @@
 # Keycloak on Google Cloud Run
 
-A complete infrastructure-as-code deployment of Keycloak on Google Cloud Run with load balancing, SSL/TLS, and serverless VPC connectivity to Cloud SQL.
+Terraform and a container build for running Keycloak 26 on Cloud Run, behind a Google Cloud global external Application Load Balancer, with Cloud SQL for PostgreSQL as the database.
 
-## Table of Contents
-
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Infrastructure Components](#infrastructure-components)
-- [Keycloak Configuration](#keycloak-configuration)
-- [Advanced Features](#advanced-features)
-- [Troubleshooting](#troubleshooting)
+- The container image is built by GitHub Actions and published to `ghcr.io/bcollard/keycloak-cloudrun`. It is public and signed with cosign.
+- Terraform deploys the rest: Cloud Run, Cloud SQL, secrets, the load balancer and its supporting resources.
+- `terraform apply` is run by hand. CI does not deploy.
 
 ## Architecture
 
-```
-<keycloak domain name>
-        ↓
-    DNS (GCP Private)
-        ↓
-Google Cloud Load Balancer (Kong tenant)
-    + SSL/TLS Certificate
-        ↓
-    Cloud Run (Kong tenant)
-        ↓
-  Serverless VPC Connector
-        ↓
-  Cloud SQL PostgreSQL (Kong tenant)
-```
+![Logical architecture](docs/img/architecture.png)
 
-**Key Components:**
-- **Global Load Balancer (GLB)** - Provides high availability and SSL/TLS termination
-- **Cloud Run** - Serverless containerized Keycloak deployment
-- **Cloud SQL PostgreSQL** - Managed database backend
-- **Serverless VPC Connector** - Secure connectivity between Cloud Run and Cloud SQL
-- **Artifact Registry** - Hosts custom Keycloak Docker image
-- **Service Accounts & Secrets** - Manages authentication and sensitive data
+Request path:
+
+1. DNS resolves the Keycloak hostname to a reserved global static IP.
+2. Port 443 terminates TLS with an uploaded wildcard certificate. Port 80 only returns a 301 to HTTPS.
+3. The URL map sends Keycloak's public paths (`/realms/`, `/.well-known/`, `/resources/`, `/js/`) to the backend.
+   - `/admin` is forwarded only when the request carries the header `keycloak-kong: <keycloak_admin_header_value>`.
+   - Everything else is redirected away.
+4. The backend service reaches Cloud Run through a serverless NEG.
+   - Cloud Run ingress is set to `internal-and-cloud-load-balancing`, so the `*.run.app` URL cannot be used to bypass the URL map.
+5. Keycloak reaches Cloud SQL over a Serverless VPC Access connector. The database has a private IP only.
+
+## What the stack includes
+
+![What the stack includes](docs/img/stack.png)
+
+| Owner | Resources |
+|---|---|
+| Terraform (`*.tf`) | Global static IP, forwarding rules (:443, :80), HTTPS and HTTP proxies, URL maps, uploaded SSL certificate, backend service, serverless NEG, Cloud Run service and invoker binding, service account and IAM, Cloud SQL instance/database/user, VPC Access connector, Secret Manager secrets, Artifact Registry remote repo (ghcr.io proxy), project APIs |
+| GitHub Actions | Multi-arch image build, push to GHCR, cosign signing (`build-push.yml`); `terraform validate` (`terraform-validate.yml`); Dependabot for action pins |
+| You, once | GCS state bucket, private services access on the VPC, DNS A record, wildcard certificate, Keycloak realm configuration |
 
 ## Prerequisites
 
-- Google Cloud Platform (GCP) account with project setup
-- `gcloud` CLI installed and configured
-- Terraform >= 1.10
-- Docker (for building custom Keycloak image)
-- Valid SSL/TLS certificate (wildcard recommended)
+- A GCP project with billing enabled, and `gcloud` authenticated against it.
+- Terraform >= 1.10.
+- A GCS bucket for Terraform state.
+- Private services access on the `default` VPC, so Cloud SQL can get a private IP. See [Configure private services access](https://cloud.google.com/sql/docs/postgres/configure-private-services-access).
+- A public DNS zone for your hostname, and a way to issue a certificate for it. `make server-cert` uses [lego](https://go-acme.github.io/lego/) with DNS-01 on Cloud DNS.
+- Optional: [gum](https://github.com/charmbracelet/gum) for `make keycloak-build`.
 
-## Quick Start
+## Setup
 
-### 1. Authenticate with GCP
+Configure the state backend and variables:
 
 ```bash
-make gcloud-login
+cp backend.hcl.example backend.hcl                  # bucket, prefix, optional credentials
+cp terraform.tfvars.example values.auto.tfvars      # project, hostname, passwords, LB names
 ```
 
-This sets up both user authentication and application default credentials.
+Both files are git-ignored.
 
-### 2. Initialize Terraform
+Issue the wildcard certificate (Cloud DNS, DNS-01):
 
 ```bash
-make tfi
+export DNS_ZONE_NAME=example.com GCP_PROJECT_DNS=my-dns-project \
+       GCP_CREDENTIALS_FILE=/path/to/dns-sa.json ACME_EMAIL=me@example.com
+make server-cert   # writes .lego/certificates/_.example.com.{crt,key}
 ```
 
-Initializes Terraform and downloads required providers.
-
-### 3. Plan Deployment
+Deploy:
 
 ```bash
-make tfp
-```
-
-Review the resources that will be created.
-
-### 4. Apply Configuration
-
-```bash
+make gcloud-login GCLOUD_CONFIG=my-config   # activates the gcloud config and refreshes ADC
+make tfi                                    # terraform init -backend-config=backend.hcl
+make tfp                                    # review the plan
 make tfa
 ```
 
-Deploys all infrastructure. When prompted, review the changes and type `yes` to confirm.
+Then point the hostname's A record at the `forwarding_rule_ip_address` output.
 
-### 5. Verify Deployment
+## Day-2 operations
 
-Access Keycloak at: `https://${var.keycloak_hostname}`
+| Task | How |
+|---|---|
+| Upgrade Keycloak | `make keycloak-build` (or edit `KEYCLOAK_VERSION`), commit and push. CI publishes the image. Then set `keycloak_version` and run `make tfa`. |
+| Rotate the certificate | `make server-cert`, then `make tfa`. The certificate uses `name_prefix` and `create_before_destroy`, so the proxy switches over without downtime. |
+| Change the `/admin` header value | Update `keycloak_admin_header_value`, then `make tfa`. |
+| Change the DB password | Update `db_password`, then `make tfa`. This updates both the Cloud SQL user and the secret. Cloud Run reads the secret's `latest` version at startup, so redeploy or restart the revision. |
+| Regenerate diagrams | `make diagrams` (requires `rsvg-convert`). |
 
-## Infrastructure Components
+`terraform plan` reads every `*.tf` file in the working tree. Run `git status` before applying.
 
-### Google Cloud SQL PostgreSQL
+## Keycloak configuration
 
-**Database Configuration:**
-- Instance: `keycloak-cloud-run-postgres-db`
-- Database: `keycloak`
-- User: `keycloak-cloud-run`
-- Password: Stored in Google Secret Manager as `keycloak-db-pwd`
+### Build and runtime flags
 
-**Access:**
-- Managed by Terraform
-- Automatic backups enabled
-- Accessible only via Serverless VPC Connector
+The image runs `kc.sh build` with health, metrics and the PostgreSQL driver baked in. Cloud Run starts it with `start --optimized`.
 
-### Cloud Run Service
-
-**Deployment Details:**
-- Service: `kong-keycloak-on-cloudrun`
-- Region: `europe-west9`
-- Image: Custom Keycloak from Artifact Registry (GitHub Proxy)
-- Environment: Configured via `values.auto.tfvars`
-
-**Configuration File:**
-- Main deployment: `cloudrun.tf`
-- Quarkus properties: `server/conf/quarkus.properties`
-- Docker image: `Dockerfile`
-
-### Global Load Balancer
-
-**Configuration:**
-- Backend Service: `keycloak-cloud-run` (serverless backend)
-- URL Map: `baptiste-glb-http`
-- SSL Certificate: `wildcard-${var.keycloak_hostname}-2026-01`
-- Forwarding Rule: `keycloak-${var.keycloak_hostname}`
-- IP Address: `34.110.159.193` (from outputs)
-
-**File:** `load-balancer.tf`
-
-### Custom Keycloak Image
-
-This project builds a custom Keycloak Docker image optimized for Cloud Run.
-
-**Build Process:**
-- Based on official Keycloak image
-- Custom Quarkus configuration for Cloud Run environment
-- Reference: https://blog.ineat-group.com/2023/09/deployer-keycloak-sous-cloudrun/
-
-**Related Files:**
-- `Dockerfile` - Container build configuration
-- `server/conf/quarkus.properties` - Keycloak Quarkus settings
-
-## Keycloak Configuration
-
-### Default Credentials
-
-| Component | Username | Password |
-|-----------|----------|----------|
-| Keycloak Admin | `admin` | *See Google Secret Manager* |
-| Database Super User | `postgres` | - |
-| Database Keycloak User | `keycloak-cloud-run` | *See Google Secret Manager* |
-
-### Accessing Admin Console
-
-1. Navigate to: `https://${var.keycloak_hostname}/admin`
-2. Login with admin credentials from Google Secret Manager
-3. Retrieve via: `gcloud secrets versions access latest --secret="keycloak-kc-admin-pwd"`
-
-## Advanced Features
-
-### Feature Flags
-
-This image opts into one preview feature at build time, mirrored in the Cloud
-Run runtime args:
+`--features=` must be identical in both places, or the optimized start refuses to run:
 
 - `Dockerfile`: `kc.sh build --features=spiffe:v1`
 - `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1"]`
 
-The two **must** stay identical — `start --optimized` refuses to run otherwise.
+Since Keycloak 26.6, `token-exchange-standard:v2`, `jwt-authorization-grant:v1` and `kubernetes-service-accounts:v1` are enabled by default. See the [features table](https://www.keycloak.org/server/features).
 
-As of Keycloak 26.6, the following flags became default-on (no opt-in needed):
-`token-exchange-standard:v2`, `jwt-authorization-grant:v1`,
-`kubernetes-service-accounts:v1`. The legacy `token-exchange:v1` preview flag
-is deprecated. See https://www.keycloak.org/server/features for the
-authoritative status table.
+`server/conf/quarkus.properties` renames the JSON log `level` key to `severity`, so Cloud Logging picks up log levels.
 
-### WebAuthn / Passwordless Authentication
+### Admin access
 
-**Setup Instructions:**
+- The bootstrap admin (`keycloak_admin` / `keycloak_admin_password`) is created on the first start against an empty database only. After that, manage admins in Keycloak itself.
+- The password is also stored in Secret Manager as `keycloak-kc-admin-pwd`:
 
-1. **Create Browser with Passkeys Flow:**
-   - Admin Console → Authentication → Flows
-   - Copy "Browser" flow → Name it "Browser with Passkeys"
-   - Set as default browser flow
+  ```bash
+  gcloud secrets versions access latest --secret=keycloak-kc-admin-pwd
+  ```
 
-2. **Enable Required Actions:**
-   - Admin Console → Authentication → Required Actions
-   - Enable: WebAuthn Register
-   - Enable: WebAuthn Register Passwordless
+- To open the admin console through the load balancer, send the `keycloak-kong` header. For example, use a browser extension that sets request headers, or pass it with `curl -H` / `kcadm.sh`.
 
-3. **Enable Passkeys Policy:**
-   - Admin Console → Authentication → Policies
-   - Toggle on "Enable Passkeys"
+### Passkeys (WebAuthn passwordless)
 
-### Direct Grant Flow (kcadm.sh)
+1. Authentication → Flows: duplicate **browser** and set the copy as the default browser flow.
+2. Authentication → Required actions: enable **WebAuthn Register** and **WebAuthn Register Passwordless**.
+3. Authentication → Policies → Webauthn Passwordless Policy: turn on **Enable Passkeys**.
 
-If using `kcadm.sh` command-line administration:
+![Browser flow](docs/img/admin-realm-authentication-flows-browser.png)
+![Passkeys policy](docs/img/admin-realm-authentication-policies-webauthn-passwordless-policy.png)
 
-1. Admin Console → Authentication → Flows
-2. Edit "Direct Grant" flow
-3. **Disable all OTP (One-Time Password) related authenticators** - They conflict with `kcadm.sh` API access
+### Direct grant for kcadm.sh
 
-### VSCode as MCP Client
+`kcadm.sh` logs in with the direct grant flow. Disable any OTP step in that flow, or `kcadm.sh` cannot authenticate.
 
-To use VSCode with Model Context Protocol (MCP) via Keycloak:
+![Direct grant flow](docs/img/admin-realm-authentication-flows-direct-grant.png)
 
-**Scope Configuration:**
-- Add `openid` scope globally in Keycloak
-- Add to your client's allowed scopes
-- Request scopes: `openid`, `phone`, `address`, `offline_access`, `organization`, `profile`, `email`, `microprofile-jwt`
+### VS Code as an MCP client
 
-**Token Configuration:**
-- Increase access token lifespan to **30 minutes** (account for clock skew between local machine and Cloud Run)
-- Add client mapper: **Audience** mapper
-  - Name: "Add audience"
-  - Mapper Type: "Audience"
-  - Add to access token: ON
-  - Include client audience: ON
+- Add the `openid` scope to the client's default scopes.
+- The client requests `openid`, `phone`, `address`, `offline_access`, `organization`, `profile`, `email` and `microprofile-jwt`.
+- Raise the access token lifespan to 30 minutes, to tolerate clock skew between the workstation and Cloud Run.
+- Add an **Audience** mapper to the client: add to access token ON, include client audience ON. The upstream issue for dynamic audiences is [keycloak/keycloak#41526](https://github.com/keycloak/keycloak/issues/41526).
 
-**Note:** There's a pending fix for dynamic audience claim injection - see https://github.com/keycloak/keycloak/issues/41526
-
-## Terraform Files Overview
+## Files
 
 | File | Purpose |
-|------|---------|
-| `terraform.tf` | Terraform configuration & remote GCS backend |
-| `variables.tf` | Variable definitions for GCP resources |
-| `cloudrun.tf` | Cloud Run service deployment |
-| `load-balancer.tf` | Global Load Balancer & networking |
-| `tf-provider-google.tf` | Google provider configuration |
-| `tf-imports.sh` | Script for importing existing resources |
-
-## Terraform Operations
-
-```bash
-# Initialize Terraform (downloads providers, sets up backend)
-make tfi
-
-# Validate syntax (optional)
-terraform validate
-
-# Plan changes (shows what will be created/modified)
-make tfp
-
-# Apply configuration
-make tfa
-
-# Destroy infrastructure (WARNING: Destructive!)
-make tfd
-
-# View current state
-terraform state list
-terraform state show <resource_name>
-```
+|---|---|
+| `terraform.tf` | Provider versions and the GCS backend (partial config, see `backend.hcl.example`) |
+| `provider-google.tf` | Google provider and default labels |
+| `variables.tf` | Input variables (see `terraform.tfvars.example`) |
+| `apis.tf` | Project APIs the stack needs |
+| `cloudrun.tf` | Artifact Registry proxy, VPC connector, Cloud SQL, secrets, IAM, Cloud Run |
+| `load-balancer.tf` | Static IP, NEG, backend service, URL maps, proxies, certificate, forwarding rules |
+| `Dockerfile` | Optimized Keycloak image |
+| `glb-wildcard-cert.sh` | Wildcard certificate via lego (`make server-cert`) |
+| `scripts/set-keycloak-version.sh` | Interactive `KEYCLOAK_VERSION` bump (`make keycloak-build`) |
+| `scripts/diagrams.py` | Source of the diagrams in `docs/img` (`make diagrams`) |
 
 ## Troubleshooting
 
-### Cloud Run Service Not Accessible
-
-**Check:**
-- Cloud Run service status: `gcloud run services list --region=europe-west9`
-- Review logs: `gcloud run services logs read kong-keycloak-on-cloudrun --region=europe-west9 --limit=50`
-- Verify firewall rules and VPC connector status
-
-### Database Connection Issues
-
-**Check:**
-- Cloud SQL instance status: `gcloud sql instances list`
-- VPC Connector: `gcloud compute networks vpc-access connectors list --region=europe-west9`
-- Network connectivity from Cloud Run to Cloud SQL
-
-### Backend Service Timeout Error
-
-If you see: `Timeout sec is not supported for a backend service with Serverless network endpoint groups`
-
-**Solution:** Remove `timeout_sec` from the backend service configuration (already fixed in this repo). Serverless backends don't support custom timeouts.
-
-## State Management
-
-This project uses a remote GCS backend for Terraform state:
-- **Bucket:** `tf-state-bco-scripts-kong-gcp`
-- **Prefix:** `terraform/bco/keycloak-cloudrun`
-- **Credentials:** `tf-state-backend-kong-scripts.json`
-
-Backups of local state files are maintained in the `backup/` directory.
-
-## Contributing
-
-When modifying Terraform configuration:
-1. Always run `terraform plan` first
-2. Review changes carefully before applying
-3. Keep state files in sync with GCS backend
-4. Document any configuration changes in this README
+| Symptom | Check |
+|---|---|
+| 403 on every resource during `plan` | ADC is for the wrong account: `make gcloud-login`. |
+| 404 or redirect on `/admin` | The `keycloak-kong` header is missing or wrong. |
+| Revision fails to start | `gcloud run services logs read kong-keycloak-on-cloudrun --region=<region> --limit=50`. A `--features` mismatch between `Dockerfile` and `cloudrun.tf` fails the optimized start. |
+| Database connection errors | `gcloud sql instances list`, `gcloud compute networks vpc-access connectors list --region=<region>`, and the private services access peering on the VPC. |
 
 ## References
 
-- [Keycloak on Cloud Run - French Blog](https://blog.ineat-group.com/2023/09/deployer-keycloak-sous-cloudrun/)
-- [Google Cloud Run Documentation](https://cloud.google.com/run/docs)
-- [Terraform Google Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [WebAuthn Specification](https://www.w3.org/TR/webauthn-2/)
-- [Keycloak Documentation](https://www.keycloak.org/documentation)
-
-
-
-
-
-
+- [Keycloak: running in a container](https://www.keycloak.org/server/containers)
+- [Keycloak: features](https://www.keycloak.org/server/features)
+- [Serverless NEGs for Cloud Run](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts)
+- [Cloud Run ingress settings](https://cloud.google.com/run/docs/securing/ingress)
+- [Deploying Keycloak on Cloud Run (French)](https://blog.ineat-group.com/2023/09/deployer-keycloak-sous-cloudrun/)

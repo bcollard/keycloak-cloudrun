@@ -4,8 +4,8 @@ provider "google" {
   zone    = var.gcp_zone
 
   default_labels = {
-    "managed-by"      = "terraform"
-    "owner"           = "baptiste-collard"
+    "managed-by"       = "terraform"
+    "owner"            = "baptiste-collard"
     "end-date"         = "2026-12-31"
     "weekend-shutdown" = "yes"
   }

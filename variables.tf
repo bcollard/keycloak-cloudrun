@@ -1,10 +1,7 @@
-
-
 # GCP
 variable "gcp_project" {
-  description = "Name of the GCP project"
+  description = "ID of the GCP project hosting Cloud Run, Cloud SQL and the load balancer"
   type        = string
-  default     = "intense-clarity-338816"
 }
 
 variable "gcp_region" {
@@ -33,13 +30,13 @@ variable "db_password" {
 }
 
 variable "keycloak_admin" {
-  description = "The Keycloak admin username"
+  description = "Username of the bootstrap admin, created on first start only"
   type        = string
   default     = "admin"
 }
 
 variable "keycloak_admin_password" {
-  description = "The Keycloak admin password"
+  description = "Password of the bootstrap admin, applied on first start only"
   type        = string
   sensitive   = true
 }
@@ -59,13 +56,19 @@ variable "forwarding_rule_name" {
   type        = string
 }
 
-variable "forwarding_rule_ip_address" {
-  description = "IP address for the global forwarding rule"
+variable "global_address_name" {
+  description = "Name of the reserved global static IP used by the forwarding rules"
   type        = string
 }
 
+variable "forwarding_rule_ip_address" {
+  description = "IP to reserve for the load balancer; leave null to let GCP allocate one"
+  type        = string
+  default     = null
+}
+
 variable "backend_service_name" {
-  description = "Name of the backend service"
+  description = "Name of the backend service and of its serverless NEG"
   type        = string
 }
 
@@ -85,7 +88,7 @@ variable "ssl_certificate_key_path" {
 }
 
 variable "keycloak_hostname" {
-  description = "Hostname for Keycloak (e.g., keycloak.kong.runlocal.dev)"
+  description = "Public hostname for Keycloak (e.g., keycloak.example.com)"
   type        = string
 }
 
@@ -96,7 +99,7 @@ variable "keycloak_log_level" {
 }
 
 variable "keycloak_admin_header_value" {
-  description = "Secret header value for admin access to Keycloak"
+  description = "Value of the keycloak-kong request header required to reach /admin through the load balancer"
   type        = string
   sensitive   = true
 }

@@ -20,5 +20,8 @@ backup/
 # ACME/Let's Encrypt files
 .lego/
 
+# Terraform backend settings (bucket, credentials path)
+backend.hcl
+
 # GCP credentials
-tf-state-backend-kong-scripts.json
+tf-state-backend-*.json

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="870" viewBox="0 0 1180 870" font-family="Helvetica, Arial, sans-serif">
+<title>Keycloak on Cloud Run: logical architecture</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5F6368"/></marker></defs>
+<rect width="1180" height="870" fill="#FFFFFF"/>
+<text x="30" y="40" font-size="20" font-weight="bold" fill="#202124">Keycloak on Cloud Run</text>
+<text x="30" y="62" font-size="13" fill="#5F6368">Request path and supporting services</text>
+<rect x="30" y="90" width="26" height="18" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="66" y="104" font-size="13" fill="#3C4043">Managed by Terraform</text>
+<rect x="30" y="118" width="26" height="18" rx="4" fill="#E6F4EA" stroke="#188038" stroke-width="1.5"/>
+<text x="66" y="132" font-size="13" fill="#3C4043">GitHub (CI, registry)</text>
+<rect x="30" y="146" width="26" height="18" rx="4" fill="#F1F3F4" stroke="#80868B" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="66" y="160" font-size="13" fill="#3C4043">Outside Terraform</text>
+<rect x="340" y="30" width="440" height="50" rx="8" fill="#FFFFFF" stroke="#202124" stroke-width="1.5"/>
+<text x="560.0" y="51.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Clients</text>
+<text x="560.0" y="70.0" font-size="12" fill="#5F6368" text-anchor="middle">browsers, applications, kcadm.sh</text>
+<rect x="340" y="120" width="440" height="56" rx="8" fill="#F1F3F4" stroke="#80868B" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="560.0" y="144.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">DNS A record: keycloak.example.com</text>
+<text x="560.0" y="163.0" font-size="12" fill="#5F6368" text-anchor="middle">public zone, may live in another project</text>
+<rect x="340" y="216" width="440" height="50" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="560.0" y="237.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Global static IP</text>
+<text x="560.0" y="256.0" font-size="12" fill="#5F6368" text-anchor="middle">shared by the :443 and :80 forwarding rules</text>
+<rect x="340" y="306" width="440" height="66" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="560.0" y="335.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Forwarding rule :443 → HTTPS proxy</text>
+<text x="560.0" y="354.0" font-size="12" fill="#5F6368" text-anchor="middle">TLS terminated with an uploaded wildcard certificate</text>
+<rect x="820" y="306" width="330" height="66" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="985.0" y="335.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Forwarding rule :80 → HTTP proxy</text>
+<text x="985.0" y="354.0" font-size="12" fill="#5F6368" text-anchor="middle">301 redirect to https://</text>
+<rect x="340" y="412" width="440" height="132" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="354" y="436" font-size="15" font-weight="bold" fill="#202124">URL map (host: keycloak.example.com)</text>
+<text x="354" y="462" font-size="13" fill="#3C4043" xml:space="preserve">/realms/  /.well-known/  /resources/  /js/   → backend</text>
+<text x="354" y="484" font-size="13" fill="#3C4043" xml:space="preserve">/admin   → backend only with header</text>
+<text x="354" y="506" font-size="13" fill="#3C4043" xml:space="preserve">             keycloak-kong: &lt;secret value&gt;</text>
+<text x="354" y="528" font-size="13" fill="#3C4043" xml:space="preserve">anything else  → redirect away</text>
+<rect x="340" y="584" width="205" height="50" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="442.5" y="605.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Backend service</text>
+<text x="442.5" y="624.0" font-size="12" fill="#5F6368" text-anchor="middle">external managed</text>
+<rect x="575" y="584" width="205" height="50" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="677.5" y="605.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Serverless NEG</text>
+<text x="677.5" y="624.0" font-size="12" fill="#5F6368" text-anchor="middle">→ Cloud Run service</text>
+<rect x="340" y="674" width="440" height="70" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="560.0" y="705.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Cloud Run: Keycloak 26</text>
+<text x="560.0" y="724.0" font-size="12" fill="#5F6368" text-anchor="middle">1 instance · start --optimized · ingress: internal + load balancer</text>
+<rect x="340" y="784" width="205" height="56" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="442.5" y="808.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Serverless VPC connector</text>
+<text x="442.5" y="827.0" font-size="12" fill="#5F6368" text-anchor="middle">private ranges only</text>
+<rect x="575" y="784" width="205" height="56" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="677.5" y="808.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Cloud SQL PostgreSQL 15</text>
+<text x="677.5" y="827.0" font-size="12" fill="#5F6368" text-anchor="middle">private IP, no public IP</text>
+<rect x="820" y="412" width="330" height="56" rx="8" fill="#E6F4EA" stroke="#188038" stroke-width="1.5"/>
+<text x="985.0" y="436.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">GitHub Actions</text>
+<text x="985.0" y="455.0" font-size="12" fill="#5F6368" text-anchor="middle">builds and signs the image</text>
+<rect x="820" y="500" width="330" height="56" rx="8" fill="#E6F4EA" stroke="#188038" stroke-width="1.5"/>
+<text x="985.0" y="524.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">ghcr.io/bcollard/keycloak-cloudrun</text>
+<text x="985.0" y="543.0" font-size="12" fill="#5F6368" text-anchor="middle">public, multi-arch, cosign-signed</text>
+<rect x="820" y="588" width="330" height="56" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="985.0" y="612.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Artifact Registry remote repo</text>
+<text x="985.0" y="631.0" font-size="12" fill="#5F6368" text-anchor="middle">pull-through proxy of ghcr.io, serves the image</text>
+<rect x="820" y="690" width="330" height="56" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="985.0" y="714.0" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">Secret Manager</text>
+<text x="985.0" y="733.0" font-size="12" fill="#5F6368" text-anchor="middle">DB and bootstrap admin passwords, as env vars</text>
+<path d="M560.0,80 L560.0,118" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M560.0,176 L560.0,214" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M560.0,266 L560.0,304" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M710.0,266 L710.0,286 L985,286 L985,304" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M560.0,372 L560.0,410" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M442,544 L442,582" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M545,609 L573,609" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M677,634 L677,672" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M442,744 L442,782" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M545,812 L573,812" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M985,468 L985,498" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="993" y="488" font-size="12" fill="#5F6368">push</text>
+<path d="M985,556 L985,586" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="993" y="576" font-size="12" fill="#5F6368">pull</text>
+<path d="M820,616 L800,616 L800,690 L782,690" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M820,718 L782,718" fill="none" stroke="#5F6368" stroke-width="1.5" marker-end="url(#a)"/>
+</svg>

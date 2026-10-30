@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="616" viewBox="0 0 1180 616" font-family="Helvetica, Arial, sans-serif">
+<title>Keycloak on Cloud Run: what the stack includes</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5F6368"/></marker></defs>
+<rect width="1180" height="616" fill="#FFFFFF"/>
+<text x="30" y="40" font-size="20" font-weight="bold" fill="#202124">What the stack includes</text>
+<text x="30" y="62" font-size="13" fill="#5F6368">Who owns each piece, and what you set up once by hand</text>
+<rect x="30" y="90" width="360" height="496" rx="10" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+<text x="48" y="122" font-size="17" font-weight="bold" fill="#1A73E8">Terraform (this repo)</text>
+<text x="48" y="156" font-size="13" font-weight="bold" fill="#202124">Edge</text>
+<text x="56" y="178" font-size="13" fill="#3C4043">• Global static IP</text>
+<text x="56" y="200" font-size="13" fill="#3C4043">• Forwarding rules :443 and :80</text>
+<text x="56" y="222" font-size="13" fill="#3C4043">• HTTPS proxy + uploaded certificate</text>
+<text x="56" y="244" font-size="13" fill="#3C4043">• HTTP proxy + redirect URL map</text>
+<text x="56" y="266" font-size="13" fill="#3C4043">• URL map with path and header rules</text>
+<text x="56" y="288" font-size="13" fill="#3C4043">• Backend service + serverless NEG</text>
+<text x="48" y="318" font-size="13" font-weight="bold" fill="#202124">Compute</text>
+<text x="56" y="340" font-size="13" fill="#3C4043">• Cloud Run service (Keycloak)</text>
+<text x="56" y="362" font-size="13" fill="#3C4043">• Public invoker, ingress limited to GLB</text>
+<text x="56" y="384" font-size="13" fill="#3C4043">• Service account + IAM bindings</text>
+<text x="48" y="414" font-size="13" font-weight="bold" fill="#202124">Data</text>
+<text x="56" y="436" font-size="13" fill="#3C4043">• Cloud SQL instance, database, user</text>
+<text x="56" y="458" font-size="13" fill="#3C4043">• Serverless VPC Access connector</text>
+<text x="48" y="488" font-size="13" font-weight="bold" fill="#202124">Supporting</text>
+<text x="56" y="510" font-size="13" fill="#3C4043">• Secret Manager secrets (2)</text>
+<text x="56" y="532" font-size="13" fill="#3C4043">• Artifact Registry remote repo (ghcr.io)</text>
+<text x="56" y="554" font-size="13" fill="#3C4043">• Required project APIs</text>
+<rect x="415" y="90" width="360" height="496" rx="10" fill="#E6F4EA" stroke="#188038" stroke-width="1.5"/>
+<text x="433" y="122" font-size="17" font-weight="bold" fill="#188038">GitHub</text>
+<text x="433" y="156" font-size="13" font-weight="bold" fill="#202124">build-push.yml</text>
+<text x="441" y="178" font-size="13" fill="#3C4043">• Runs when KEYCLOAK_VERSION changes</text>
+<text x="441" y="200" font-size="13" fill="#3C4043">• Builds linux/amd64 + linux/arm64</text>
+<text x="441" y="222" font-size="13" fill="#3C4043">• Pushes to ghcr.io (public)</text>
+<text x="441" y="244" font-size="13" fill="#3C4043">• Signs with cosign (keyless)</text>
+<text x="433" y="274" font-size="13" font-weight="bold" fill="#202124">terraform-validate.yml</text>
+<text x="441" y="296" font-size="13" fill="#3C4043">• Runs on *.tf changes</text>
+<text x="441" y="318" font-size="13" fill="#3C4043">• terraform init -backend=false + validate</text>
+<text x="433" y="348" font-size="13" font-weight="bold" fill="#202124">dependabot.yml</text>
+<text x="441" y="370" font-size="13" fill="#3C4043">• Monthly bumps of SHA-pinned actions</text>
+<rect x="800" y="90" width="360" height="496" rx="10" fill="#F1F3F4" stroke="#80868B" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="818" y="122" font-size="17" font-weight="bold" fill="#80868B">Outside Terraform (one-time setup)</text>
+<text x="818" y="156" font-size="13" font-weight="bold" fill="#202124">GCP</text>
+<text x="826" y="178" font-size="13" fill="#3C4043">• GCS bucket for Terraform state</text>
+<text x="826" y="200" font-size="13" fill="#3C4043">• Private services access on the VPC</text>
+<text x="840" y="222" font-size="13" fill="#3C4043">(needed by Cloud SQL private IP)</text>
+<text x="818" y="252" font-size="13" font-weight="bold" fill="#202124">DNS and TLS</text>
+<text x="826" y="274" font-size="13" fill="#3C4043">• A record for the Keycloak hostname</text>
+<text x="826" y="296" font-size="13" fill="#3C4043">• Wildcard cert via lego DNS-01</text>
+<text x="840" y="318" font-size="13" fill="#3C4043">(make server-cert)</text>
+<text x="818" y="348" font-size="13" font-weight="bold" fill="#202124">Deploy</text>
+<text x="826" y="370" font-size="13" fill="#3C4043">• make tfa after each image or .tf change</text>
+<text x="840" y="392" font-size="13" fill="#3C4043">(CI does not run terraform apply)</text>
+<text x="818" y="422" font-size="13" font-weight="bold" fill="#202124">Keycloak</text>
+<text x="826" y="444" font-size="13" fill="#3C4043">• Realms, flows, passkeys: admin console</text>
+<text x="840" y="466" font-size="13" fill="#3C4043">or kcadm.sh / Admin REST API</text>
+</svg>

@@ -7,12 +7,18 @@ container image to GHCR, and only when `KEYCLOAK_VERSION` changes. It does
 **not** run `terraform apply`. To roll out a new image or any `cloudrun.tf` /
 `load-balancer.tf` change to the live service, you must:
 
-1. `make gcloud-login` — interactive: activates the `kong` gcloud config
-   (project `intense-clarity-338816`, account `baptiste.collard@konghq.com`)
-   and refreshes Application Default Credentials. Terraform uses ADC, and the
-   default `perso` gcloud config does not have access to this project, so
-   skipping this step gives 403s on every resource refresh.
+1. `make gcloud-login` — interactive: activates the gcloud config named by
+   `GCLOUD_CONFIG` (default `kong`) and refreshes Application Default
+   Credentials. Terraform uses ADC, and the default gcloud config does not have
+   access to the deployment project, so skipping this step gives 403s on every
+   resource refresh.
 2. `make tfa` (or `terraform apply`).
+
+The project ID, hostname and LB resource names live in the git-ignored
+`values.auto.tfvars`; backend bucket settings live in the git-ignored
+`backend.hcl` (`make tfi` passes it to `terraform init`). The repo is public:
+never commit either file, state files, or real secret values (including in
+README examples).
 
 ## Keep `--features` flags in sync between build and runtime
 

@@ -1,0 +1,6 @@
+# Copy to backend.hcl and run `make tfi`.
+bucket = "my-terraform-state-bucket"
+prefix = "keycloak-cloudrun"
+# Optional: service account key used only to read/write the state bucket.
+# Omit to use Application Default Credentials.
+# credentials = "tf-state-backend.json"

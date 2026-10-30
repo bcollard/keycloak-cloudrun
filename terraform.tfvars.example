@@ -1,0 +1,27 @@
+# Copy to values.auto.tfvars (git-ignored) and fill in.
+
+# --- Google Cloud
+gcp_project = "my-gcp-project"
+gcp_region  = "europe-west9"
+gcp_zone    = "europe-west9-b"
+
+# --- Keycloak
+keycloak_version        = "26.6.2"
+keycloak_hostname       = "keycloak.example.com"
+keycloak_admin          = "admin"
+keycloak_admin_password = "change-me"
+db_password             = "change-me"
+# Clients must send `keycloak-kong: <value>` to reach /admin through the GLB
+keycloak_admin_header_value = "change-me"
+
+# --- Load balancer
+global_address_name     = "keycloak-glb-ip"
+url_map_name            = "keycloak-glb"
+target_https_proxy_name = "keycloak-glb-https-proxy"
+forwarding_rule_name    = "keycloak-glb"
+backend_service_name    = "keycloak-cloud-run"
+ssl_certificate_name    = "wildcard-example-com"
+ssl_certificate_path     = ".lego/certificates/_.example.com.crt"
+ssl_certificate_key_path = ".lego/certificates/_.example.com.key"
+# Optional: promote an IP already in use instead of allocating a new one
+# forwarding_rule_ip_address = "203.0.113.10"
