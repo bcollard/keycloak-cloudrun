@@ -90,8 +90,15 @@ The image runs `kc.sh build` with health, metrics and the PostgreSQL driver bake
 
 `--features=` must be identical in both places, or the optimized start refuses to run:
 
-- `Dockerfile`: `kc.sh build --features=spiffe:v1`
-- `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1"]`
+- `Dockerfile`: `kc.sh build --features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1`
+- `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1"]`
+
+| Flag | Status (26.8) | Purpose |
+|---|---|---|
+| `spiffe:v1` | preview | SPIFFE trust relationship provider |
+| `cimd:v1` | experimental | OAuth Client ID Metadata Document, required by MCP clients since spec 2025-11-25 |
+| `parameterized-scopes:v1` | preview | Parameterized OAuth 2.0 client scopes |
+| `identity-assertion-jwt:v1` | experimental | Identity Assertion JWT Authorization Grant (ID-JAG), partial |
 
 Since Keycloak 26.6, `token-exchange-standard:v2`, `jwt-authorization-grant:v1` and `kubernetes-service-accounts:v1` are enabled by default. See the [features table](https://www.keycloak.org/server/features).
 

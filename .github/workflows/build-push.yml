@@ -5,10 +5,14 @@ on:
     branches: [ "main" ]
     paths:
       - "KEYCLOAK_VERSION"
+      - "Dockerfile"
+      - "server/**"
   pull_request:
     branches: [ "main" ]
     paths:
       - "KEYCLOAK_VERSION"
+      - "Dockerfile"
+      - "server/**"
 
 env:
   REGISTRY: ghcr.io
