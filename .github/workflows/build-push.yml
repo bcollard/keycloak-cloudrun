@@ -5,10 +5,17 @@ on:
     branches: [ "main" ]
     paths:
       - "KEYCLOAK_VERSION"
+      - "Dockerfile"
+      - "server/**"
+      - ".github/workflows/build-push.yml"
   pull_request:
     branches: [ "main" ]
     paths:
       - "KEYCLOAK_VERSION"
+      - "Dockerfile"
+      - "server/**"
+      - ".github/workflows/build-push.yml"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -91,12 +98,10 @@ jobs:
           build-args: |
             KEYCLOAK_VERSION=${{ env.KEYCLOAK_VERSION }}
 
-      # Sign the resulting Docker image digest except on PRs.
-      # This will only write to the public Rekor transparency log when the Docker
-      # repository is public to verify the origin of the image.
+      # Sign the image digest once (signatures attach to the digest, so every
+      # tag is covered). Signing once per tag hit Rekor 409 conflicts on retries.
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        run: cosign sign --yes "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
