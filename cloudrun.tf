@@ -145,7 +145,7 @@ resource "google_cloud_run_service" "default" {
 
       containers {
         image = local.keycloak_image
-        args  = ["start", "--optimized", "--features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1"]
+        args  = ["start", "--optimized", "--features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1,client-admin-api:v2"]
 
         ports {
           name           = "http1"

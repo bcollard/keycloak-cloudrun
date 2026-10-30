@@ -30,8 +30,8 @@ list:
 - `Dockerfile` — `RUN /opt/keycloak/bin/kc.sh build --features=…`
 - `cloudrun.tf` — `args = ["start", "--optimized", "--features=…"]`
 
-The current value is `spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1`
-(SPIFFE, CIMD, parameterized scopes, ID-JAG; all preview or experimental in
+The current value is `spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1,client-admin-api:v2`
+(SPIFFE, CIMD, parameterized scopes, ID-JAG, Client Admin API v2; all preview or experimental in
 26.8, so this deployment has to opt into them). Standard token exchange v2, JWT authorization
 grant, and Kubernetes service-account grants became default-on in Keycloak
 26.6 — don't re-add them to the flag list.

@@ -90,8 +90,8 @@ The image runs `kc.sh build` with health, metrics and the PostgreSQL driver bake
 
 `--features=` must be identical in both places, or the optimized start refuses to run:
 
-- `Dockerfile`: `kc.sh build --features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1`
-- `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1"]`
+- `Dockerfile`: `kc.sh build --features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1,client-admin-api:v2`
+- `cloudrun.tf`: `args = ["start", "--optimized", "--features=spiffe:v1,cimd:v1,parameterized-scopes:v1,identity-assertion-jwt:v1,client-admin-api:v2"]`
 
 | Flag | Status (26.8) | Purpose |
 |---|---|---|
@@ -99,6 +99,7 @@ The image runs `kc.sh build` with health, metrics and the PostgreSQL driver bake
 | `cimd:v1` | experimental | OAuth Client ID Metadata Document, required by MCP clients since spec 2025-11-25 |
 | `parameterized-scopes:v1` | preview | Parameterized OAuth 2.0 client scopes |
 | `identity-assertion-jwt:v1` | experimental | Identity Assertion JWT Authorization Grant (ID-JAG), partial |
+| `client-admin-api:v2` | preview | [Client Admin API v2](https://www.keycloak.org/admin-api/admin-api-v2) at `/admin/api/{realm}/clients/v2`, alongside the v1 Admin REST API. Behind the same `/admin` header rule on the GLB. |
 
 Since Keycloak 26.6, `token-exchange-standard:v2`, `jwt-authorization-grant:v1` and `kubernetes-service-accounts:v1` are enabled by default. See the [features table](https://www.keycloak.org/server/features).
 
