@@ -6,7 +6,9 @@ gcp_region  = "europe-west9"
 gcp_zone    = "europe-west9-b"
 
 # --- Keycloak
-keycloak_version        = "26.6.2"
+keycloak_version        = "26.8.1"
+# Optional: deploy by digest (`make image-digest`) instead of the tag
+# keycloak_image_digest = "sha256:..."
 keycloak_hostname       = "keycloak.example.com"
 keycloak_admin          = "admin"
 keycloak_admin_password = "change-me"
