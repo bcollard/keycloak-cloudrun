@@ -74,7 +74,7 @@ Then point the hostname's A record at the `forwarding_rule_ip_address` output.
 
 | Task | How |
 |---|---|
-| Upgrade Keycloak | `make keycloak-build` (or edit `KEYCLOAK_VERSION`), commit and push. CI publishes the image. Then set `keycloak_version` and run `make tfa`. |
+| Upgrade Keycloak | `make keycloak-build` (or edit `KEYCLOAK_VERSION`), commit and push. Wait for the "Build and Push" workflow to finish, then set `keycloak_version` and `keycloak_image_digest` (from `make image-digest`) and run `make tfa`. |
 | Rotate the certificate | `make server-cert`, then `make tfa`. The certificate uses `name_prefix` and `create_before_destroy`, so the proxy switches over without downtime. |
 | Change the `/admin` header value | Update `keycloak_admin_header_value`, then `make tfa`. |
 | Change the DB password | Update `db_password`, then `make tfa`. This updates both the Cloud SQL user and the secret. Cloud Run reads the secret's `latest` version at startup, so redeploy or restart the revision. |

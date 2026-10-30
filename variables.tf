@@ -23,6 +23,17 @@ variable "keycloak_version" {
   default     = "26.6.2"
 }
 
+variable "keycloak_image_digest" {
+  description = "Optional image digest (sha256:...) to deploy instead of the keycloak_version tag; get it with `make image-digest`"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.keycloak_image_digest == null || can(regex("^sha256:[0-9a-f]{64}$", var.keycloak_image_digest))
+    error_message = "keycloak_image_digest must look like sha256:<64 hex chars>."
+  }
+}
+
 variable "db_password" {
   description = "The password for the database user"
   type        = string

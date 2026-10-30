@@ -117,6 +117,15 @@ resource "google_project_iam_member" "artifact_registry_reader" {
 
 ###
 # Cloud Run Service
+locals {
+  keycloak_image_repo = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/${google_artifact_registry_repository.github_proxy.repository_id}/bcollard/keycloak-cloudrun"
+  # A digest pins the exact image CI built and signed, and is resolved by the
+  # remote repo even when it has not cached the tag yet.
+  keycloak_image = (var.keycloak_image_digest != null
+    ? "${local.keycloak_image_repo}@${var.keycloak_image_digest}"
+  : "${local.keycloak_image_repo}:${var.keycloak_version}")
+}
+
 resource "google_cloud_run_service" "default" {
   name     = "kong-keycloak-on-cloudrun"
   location = var.gcp_region
@@ -135,7 +144,7 @@ resource "google_cloud_run_service" "default" {
       timeout_seconds       = 60
 
       containers {
-        image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/github-proxy/bcollard/keycloak-cloudrun:${var.keycloak_version}"
+        image = local.keycloak_image
         args  = ["start", "--optimized", "--features=spiffe:v1"]
 
         ports {
