@@ -231,7 +231,7 @@
     <p class="lede">How a request reaches Keycloak.</p>
     <ol class="steps">
       <li>DNS resolves the Keycloak hostname to a reserved global static IP.</li>
-      <li>Port 443 terminates TLS with an uploaded wildcard certificate. Port 80 returns a 301 to HTTPS.</li>
+      <li>Port 443 terminates TLS with an uploaded certificate. Port 80 returns a 301 to HTTPS.</li>
       <li>The URL map sends <code>/realms/</code>, <code>/.well-known/</code>, <code>/resources/</code> and <code>/js/</code> to the backend. <code>/admin</code> needs the header. Everything else is redirected.</li>
       <li>The backend service reaches Cloud Run through a serverless NEG.</li>
       <li>Keycloak reaches Cloud SQL over the VPC Access connector.</li>
@@ -253,7 +253,7 @@
         <tbody>
           <tr><td>Terraform</td><td>Static IP, forwarding rules, HTTPS and HTTP proxies, URL maps, SSL certificate, backend service, serverless NEG, Cloud Run service, service account and IAM, Cloud SQL, VPC Access connector, Secret Manager secrets, Artifact Registry remote repository, project APIs</td></tr>
           <tr><td>GitHub Actions</td><td>Multi-arch image build, push to GHCR, cosign signing, <code>terraform validate</code>, Renovate</td></tr>
-          <tr><td>You, once</td><td>GCS state bucket, private services access on the VPC, DNS A record, wildcard certificate, realm configuration</td></tr>
+          <tr><td>You, once</td><td>GCS state bucket, private services access on the VPC, DNS A record, TLS certificate, realm configuration</td></tr>
         </tbody>
       </table>
     </div>
@@ -273,16 +273,30 @@
 <span class="k">cd</span> keycloak-cloudrun
 <span class="k">cp</span> backend.hcl.example backend.hcl               <span class="c"># state bucket and prefix</span>
 <span class="k">cp</span> terraform.tfvars.example values.auto.tfvars   <span class="c"># project, hostname, passwords</span></code></pre>
-    <h3>Issue the wildcard certificate</h3>
+    <h3>Get a TLS certificate</h3>
+    <p>
+      The load balancer uses an uploaded certificate. Any publicly trusted certificate that covers
+      your Keycloak hostname works, single name or wildcard, from any CA or ACME client.
+      Set <code>ssl_certificate_path</code> (full chain, PEM) and <code>ssl_certificate_key_path</code>
+      (private key, PEM) in <code>values.auto.tfvars</code>.
+    </p>
+<pre><code><span class="c"># lego with your DNS provider, see https://go-acme.github.io/lego/dns/</span>
+<span class="k">lego</span> run --email <span class="s">me@example.com</span> --dns <span class="s">&lt;provider&gt;</span> -d <span class="s">keycloak.example.com</span> --accept-tos --path ./.lego
+
+<span class="c"># certbot with a manual DNS-01 TXT record</span>
+<span class="k">certbot</span> certonly --manual --preferred-challenges dns -d <span class="s">keycloak.example.com</span></code></pre>
+    <p>If your zone is on Google Cloud DNS, <code>make server-cert</code> wraps lego and issues a wildcard certificate:</p>
 <pre><code><span class="k">export</span> <span class="v">DNS_ZONE_NAME</span>=<span class="s">example.com</span> <span class="v">GCP_PROJECT_DNS</span>=<span class="s">my-dns-project</span> \
        <span class="v">GCP_CREDENTIALS_FILE</span>=<span class="s">/path/to/dns-sa.json</span> <span class="v">ACME_EMAIL</span>=<span class="s">me@example.com</span>
-<span class="k">make</span> server-cert   <span class="c"># lego DNS-01, writes .lego/certificates/_.example.com.{crt,key}</span></code></pre>
+<span class="k">make</span> server-cert   <span class="c"># writes .lego/certificates/_.example.com.{crt,key}</span></code></pre>
     <h3>Apply</h3>
 <pre><code><span class="k">make</span> gcloud-login <span class="v">GCLOUD_CONFIG</span>=<span class="s">my-config</span>   <span class="c"># activate the gcloud config and refresh ADC for Terraform</span>
 <span class="k">make</span> tfi                                    <span class="c"># terraform init with backend.hcl</span>
 <span class="k">make</span> tfp                                    <span class="c"># terraform plan, review the changes</span>
 <span class="k">make</span> tfa                                    <span class="c"># terraform apply</span></code></pre>
-    <p>Point the hostname's A record at the <code>forwarding_rule_ip_address</code> output.</p>
+    <h3>Create the DNS record</h3>
+    <p>At your DNS provider, create an A record for the Keycloak hostname that points at the load balancer IP:</p>
+<pre><code><span class="k">terraform</span> output -raw forwarding_rule_ip_address</code></pre>
   </div>
 </section>
 
