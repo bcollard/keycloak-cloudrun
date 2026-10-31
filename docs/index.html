@@ -52,6 +52,10 @@
     --bg:       #f6f9fe;
     --bg-alt:   #ffffff;
     --code-bg:  rgba(20, 22, 26, .06);
+    --hl-cmd:   #8a3ab9;
+    --hl-var:   #0b5fd1;
+    --hl-str:   #1a7f37;
+    --hl-cmt:   #6e7781;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -64,6 +68,10 @@
       --bg:       #0f141c;
       --bg-alt:   #161d28;
       --code-bg:  rgba(233, 238, 246, .09);
+      --hl-cmd:   #d2a8ff;
+      --hl-var:   #79c0ff;
+      --hl-str:   #7ee787;
+      --hl-cmt:   #8b949e;
     }
   }
 
@@ -95,6 +103,10 @@
     max-width: 46rem;
   }
   pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal }
+  pre .k { color: var(--hl-cmd); font-weight: 600 }
+  pre .v { color: var(--hl-var) }
+  pre .s { color: var(--hl-str) }
+  pre .c { color: var(--hl-cmt); font-style: italic }
 
   .hero { text-align: center; padding: 4.5rem 0 3.5rem; border-bottom: 1px solid var(--line) }
   .hero h1 { font-size: clamp(2.1rem, 5vw, 3rem); margin: 0 0 .5rem; letter-spacing: -.02em }
@@ -257,19 +269,19 @@
     <h2>Deploy</h2>
     <p class="lede">Requires a GCP project with billing, Terraform 1.10 or later, a GCS bucket for state, and private services access on the <code>default</code> VPC.</p>
     <h3>Configure</h3>
-<pre><code>git clone https://github.com/bcollard/keycloak-cloudrun
-cd keycloak-cloudrun
-cp backend.hcl.example backend.hcl               # state bucket and prefix
-cp terraform.tfvars.example values.auto.tfvars   # project, hostname, passwords</code></pre>
+<pre><code><span class="k">git</span> clone <span class="s">https://github.com/bcollard/keycloak-cloudrun</span>
+<span class="k">cd</span> keycloak-cloudrun
+<span class="k">cp</span> backend.hcl.example backend.hcl               <span class="c"># state bucket and prefix</span>
+<span class="k">cp</span> terraform.tfvars.example values.auto.tfvars   <span class="c"># project, hostname, passwords</span></code></pre>
     <h3>Issue the wildcard certificate</h3>
-<pre><code>export DNS_ZONE_NAME=example.com GCP_PROJECT_DNS=my-dns-project \
-       GCP_CREDENTIALS_FILE=/path/to/dns-sa.json ACME_EMAIL=me@example.com
-make server-cert</code></pre>
+<pre><code><span class="k">export</span> <span class="v">DNS_ZONE_NAME</span>=<span class="s">example.com</span> <span class="v">GCP_PROJECT_DNS</span>=<span class="s">my-dns-project</span> \
+       <span class="v">GCP_CREDENTIALS_FILE</span>=<span class="s">/path/to/dns-sa.json</span> <span class="v">ACME_EMAIL</span>=<span class="s">me@example.com</span>
+<span class="k">make</span> server-cert   <span class="c"># lego DNS-01, writes .lego/certificates/_.example.com.{crt,key}</span></code></pre>
     <h3>Apply</h3>
-<pre><code>make gcloud-login GCLOUD_CONFIG=my-config
-make tfi
-make tfp
-make tfa</code></pre>
+<pre><code><span class="k">make</span> gcloud-login <span class="v">GCLOUD_CONFIG</span>=<span class="s">my-config</span>   <span class="c"># activate the gcloud config and refresh ADC for Terraform</span>
+<span class="k">make</span> tfi                                    <span class="c"># terraform init with backend.hcl</span>
+<span class="k">make</span> tfp                                    <span class="c"># terraform plan, review the changes</span>
+<span class="k">make</span> tfa                                    <span class="c"># terraform apply</span></code></pre>
     <p>Point the hostname's A record at the <code>forwarding_rule_ip_address</code> output.</p>
   </div>
 </section>
