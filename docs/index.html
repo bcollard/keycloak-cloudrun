@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MGG4JN8GE6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-MGG4JN8GE6');
+</script>
+
+<title>Keycloak on Google Cloud Run – Terraform with Cloud SQL and a global load balancer</title>
+<meta name="description" content="Run Keycloak 26 on Google Cloud Run with Terraform: Cloud SQL for PostgreSQL on a private IP, a global external Application Load Balancer, an optimized signed container image, and MCP-ready OAuth features.">
+<link rel="canonical" href="https://bcollard.github.io/keycloak-cloudrun/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b5fd1'/%3E%3Ccircle cx='12' cy='16' r='5' fill='none' stroke='%23fff' stroke-width='3'/%3E%3Cpath d='M17 16h10M23 16v4M27 16v3' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Keycloak on Google Cloud Run, in Terraform">
+<meta property="og:description" content="Keycloak 26 on Cloud Run with Cloud SQL and a global external Application Load Balancer. Terraform plus a signed, optimized container image.">
+<meta property="og:url" content="https://bcollard.github.io/keycloak-cloudrun/">
+<meta property="og:image" content="https://bcollard.github.io/keycloak-cloudrun/img/architecture.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "keycloak-cloudrun",
+  "description": "Terraform and a container build for running Keycloak 26 on Google Cloud Run, behind a global external Application Load Balancer, with Cloud SQL for PostgreSQL.",
+  "url": "https://bcollard.github.io/keycloak-cloudrun/",
+  "codeRepository": "https://github.com/bcollard/keycloak-cloudrun",
+  "programmingLanguage": ["HCL", "Dockerfile"],
+  "runtimePlatform": "Google Cloud Run",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "keywords": "Keycloak, Google Cloud Run, Terraform, Cloud SQL, PostgreSQL, load balancer, OAuth, OIDC, MCP, CIMD, SPIFFE, token exchange",
+  "isAccessibleForFree": true,
+  "author": { "@type": "Person", "name": "Baptiste Collard", "url": "https://github.com/bcollard" }
+}
+</script>
+
+<!-- Everything is inline except the diagrams in img/. No external fonts or stylesheets. -->
+<style>
+  :root {
+    --accent:   #0b5fd1;
+    --accent-d: #084aa3;
+    --ink:      #14161a;
+    --muted:    #566070;
+    --line:     #dbe2ec;
+    --bg:       #f6f9fe;
+    --bg-alt:   #ffffff;
+    --code-bg:  rgba(20, 22, 26, .06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --accent:   #5aa2ff;
+      --accent-d: #8abdff;
+      --ink:      #e9eef6;
+      --muted:    #9aa6b6;
+      --line:     #2a3342;
+      --bg:       #0f141c;
+      --bg-alt:   #161d28;
+      --code-bg:  rgba(233, 238, 246, .09);
+    }
+  }
+
+  * { box-sizing: border-box }
+
+  body {
+    margin: 0;
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem }
+
+  a { color: var(--accent); text-underline-offset: 2px }
+  a:hover { color: var(--accent-d) }
+
+  code, pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace }
+  code { font-size: .875em; background: var(--code-bg); padding: .15em .4em; border-radius: 4px; overflow-wrap: anywhere }
+  pre {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: .84rem;
+    line-height: 1.6;
+    border: 1px solid var(--line);
+    max-width: 46rem;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal }
+
+  .hero { text-align: center; padding: 4.5rem 0 3.5rem; border-bottom: 1px solid var(--line) }
+  .hero h1 { font-size: clamp(2.1rem, 5vw, 3rem); margin: 0 0 .5rem; letter-spacing: -.02em }
+  .tagline {
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    color: var(--muted);
+    max-width: 38rem;
+    margin: 0 auto 2rem;
+  }
+  .cta { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap }
+  .btn {
+    display: inline-block;
+    padding: .7rem 1.35rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .95rem;
+    text-decoration: none;
+    border: 1px solid var(--accent);
+  }
+  .btn-primary { background: var(--accent); color: #fff }
+  .btn-primary:hover { background: var(--accent-d); border-color: var(--accent-d); color: #fff }
+  .btn-ghost { color: var(--accent); background: transparent }
+  .note { font-size: .85rem; color: var(--muted); margin-top: 1rem }
+
+  section { padding: 3.25rem 0; border-bottom: 1px solid var(--line) }
+  section.alt { background: var(--bg-alt) }
+  h2 { font-size: 1.55rem; margin: 0 0 .5rem; letter-spacing: -.01em }
+  h3 { font-size: 1.05rem; margin: 1.75rem 0 .35rem }
+  .lede { color: var(--muted); margin: 0 0 1.75rem; max-width: 46rem }
+  p { max-width: 46rem }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.5rem 2rem;
+    margin-top: 1.5rem;
+  }
+  .grid h3 { margin-top: 0 }
+  .grid p { margin: 0; font-size: .93rem; color: var(--muted) }
+
+  figure { margin: 1.5rem 0 0 }
+  figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  figcaption { font-size: .85rem; color: var(--muted); margin-top: .5rem }
+
+  ol.steps { max-width: 46rem; padding-left: 1.25rem }
+  ol.steps li { margin: .35rem 0 }
+
+  .table-wrap { overflow-x: auto; max-width: 46rem }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem }
+  th, td { text-align: left; padding: .55rem .75rem; border-bottom: 1px solid var(--line); vertical-align: top }
+  th { color: var(--muted); font-weight: 600 }
+
+  dl.faq { max-width: 46rem }
+  dl.faq dt { font-weight: 600; margin-top: 1.5rem }
+  dl.faq dd { margin: .35rem 0 0; color: var(--muted) }
+
+  footer { padding: 2.5rem 0 3.5rem; font-size: .9rem; color: var(--muted); text-align: center }
+  footer a { color: var(--muted) }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Keycloak on Cloud Run</h1>
+    <p class="tagline">
+      Terraform and a container build for running Keycloak 26 on Google Cloud Run,
+      behind a global external Application Load Balancer, with Cloud SQL for PostgreSQL.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#deploy">Deploy</a>
+      <a class="btn btn-ghost" href="https://github.com/bcollard/keycloak-cloudrun">Source on GitHub</a>
+    </div>
+    <p class="note">Apache-2.0. Image published to <code>ghcr.io/bcollard/keycloak-cloudrun</code>, signed with cosign.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>What you get</h2>
+    <p class="lede">A production-shaped Keycloak with no VMs or Kubernetes cluster to run.</p>
+
+    <div class="grid">
+      <div>
+        <h3>Serverless Keycloak</h3>
+        <p>Cloud Run runs an optimized image (<code>kc.sh start --optimized</code>) with health, metrics and the PostgreSQL driver built in.</p>
+      </div>
+      <div>
+        <h3>Private database</h3>
+        <p>Cloud SQL for PostgreSQL on a private IP only, reached through a Serverless VPC Access connector.</p>
+      </div>
+      <div>
+        <h3>Global load balancer</h3>
+        <p>Static IP, TLS on 443, HTTP-to-HTTPS redirect, and a URL map that only exposes Keycloak's public paths.</p>
+      </div>
+      <div>
+        <h3>Gated admin console</h3>
+        <p><code>/admin</code> is forwarded only when the request carries a shared-secret header. Cloud Run ingress blocks the <code>*.run.app</code> URL.</p>
+      </div>
+      <div>
+        <h3>Signed image</h3>
+        <p>GitHub Actions builds a multi-arch image, pushes it to GHCR and signs it with cosign. Cloud Run deploys it by digest through an Artifact Registry proxy.</p>
+      </div>
+      <div>
+        <h3>Secrets in Secret Manager</h3>
+        <p>Database and bootstrap admin passwords are stored in Secret Manager and injected as environment variables.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>Architecture</h2>
+    <p class="lede">How a request reaches Keycloak.</p>
+    <ol class="steps">
+      <li>DNS resolves the Keycloak hostname to a reserved global static IP.</li>
+      <li>Port 443 terminates TLS with an uploaded wildcard certificate. Port 80 returns a 301 to HTTPS.</li>
+      <li>The URL map sends <code>/realms/</code>, <code>/.well-known/</code>, <code>/resources/</code> and <code>/js/</code> to the backend. <code>/admin</code> needs the header. Everything else is redirected.</li>
+      <li>The backend service reaches Cloud Run through a serverless NEG.</li>
+      <li>Keycloak reaches Cloud SQL over the VPC Access connector.</li>
+    </ol>
+    <figure>
+      <img src="img/architecture.svg" width="1180" height="870" loading="lazy"
+           alt="Keycloak on Cloud Run architecture: global load balancer, serverless NEG, Cloud Run, VPC Access connector and Cloud SQL">
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What the stack includes</h2>
+    <p class="lede">Who creates what.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Owner</th><th>Resources</th></tr></thead>
+        <tbody>
+          <tr><td>Terraform</td><td>Static IP, forwarding rules, HTTPS and HTTP proxies, URL maps, SSL certificate, backend service, serverless NEG, Cloud Run service, service account and IAM, Cloud SQL, VPC Access connector, Secret Manager secrets, Artifact Registry remote repository, project APIs</td></tr>
+          <tr><td>GitHub Actions</td><td>Multi-arch image build, push to GHCR, cosign signing, <code>terraform validate</code>, Renovate</td></tr>
+          <tr><td>You, once</td><td>GCS state bucket, private services access on the VPC, DNS A record, wildcard certificate, realm configuration</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figure>
+      <img src="img/stack.svg" width="1180" height="616" loading="lazy"
+           alt="Resources created by Terraform, by GitHub Actions, and by hand">
+    </figure>
+  </div>
+</section>
+
+<section class="alt" id="deploy">
+  <div class="wrap">
+    <h2>Deploy</h2>
+    <p class="lede">Requires a GCP project with billing, Terraform 1.10 or later, a GCS bucket for state, and private services access on the <code>default</code> VPC.</p>
+    <h3>Configure</h3>
+<pre><code>git clone https://github.com/bcollard/keycloak-cloudrun
+cd keycloak-cloudrun
+cp backend.hcl.example backend.hcl               # state bucket and prefix
+cp terraform.tfvars.example values.auto.tfvars   # project, hostname, passwords</code></pre>
+    <h3>Issue the wildcard certificate</h3>
+<pre><code>export DNS_ZONE_NAME=example.com GCP_PROJECT_DNS=my-dns-project \
+       GCP_CREDENTIALS_FILE=/path/to/dns-sa.json ACME_EMAIL=me@example.com
+make server-cert</code></pre>
+    <h3>Apply</h3>
+<pre><code>make gcloud-login GCLOUD_CONFIG=my-config
+make tfi
+make tfp
+make tfa</code></pre>
+    <p>Point the hostname's A record at the <code>forwarding_rule_ip_address</code> output.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Keycloak features enabled</h2>
+    <p class="lede">Preview and experimental features for agent and workload identity, baked in at build time.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Flag</th><th>Status in 26.8</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>cimd:v1</code></td><td>experimental</td><td>OAuth Client ID Metadata Document, required by MCP clients since spec 2025-11-25</td></tr>
+          <tr><td><code>identity-assertion-jwt:v1</code></td><td>experimental</td><td>Identity Assertion JWT Authorization Grant (ID-JAG)</td></tr>
+          <tr><td><code>spiffe:v1</code></td><td>preview</td><td>SPIFFE trust relationship provider</td></tr>
+          <tr><td><code>parameterized-scopes:v1</code></td><td>preview</td><td>Parameterized OAuth 2.0 client scopes</td></tr>
+          <tr><td><code>client-admin-api:v2</code></td><td>preview</td><td>Client Admin API v2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Standard token exchange v2, JWT authorization grant and Kubernetes service-account grants are on by default since Keycloak 26.6.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <h2>FAQ</h2>
+    <dl class="faq">
+      <dt>Does CI deploy to Cloud Run?</dt>
+      <dd>No. GitHub Actions builds and signs the image when <code>KEYCLOAK_VERSION</code> changes. You run <code>terraform apply</code> yourself.</dd>
+
+      <dt>How do I upgrade Keycloak?</dt>
+      <dd>Bump <code>KEYCLOAK_VERSION</code> and push. When the build finishes, set <code>keycloak_version</code> and <code>keycloak_image_digest</code> (from <code>make image-digest</code>) and run <code>make tfa</code>.</dd>
+
+      <dt>Can the certificate be rotated without downtime?</dt>
+      <dd>Yes. The certificate uses <code>name_prefix</code> and <code>create_before_destroy</code>, so the proxy switches to the new one before the old one is deleted.</dd>
+
+      <dt>Why does the revision fail to start after changing features?</dt>
+      <dd>An optimized start needs the same <code>--features</code> list at build and run time. Keep the <code>Dockerfile</code> and <code>cloudrun.tf</code> values identical.</dd>
+
+      <dt>Does it support passkeys?</dt>
+      <dd>Yes, through Keycloak's WebAuthn passwordless policy. The <a href="https://github.com/bcollard/keycloak-cloudrun#passkeys-webauthn-passwordless">README</a> lists the realm settings.</dd>
+    </dl>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/bcollard/keycloak-cloudrun">GitHub</a> ·
+    <a href="https://github.com/bcollard/keycloak-cloudrun/pkgs/container/keycloak-cloudrun">Container image</a> ·
+    <a href="https://github.com/bcollard/keycloak-cloudrun/blob/main/LICENSE">Apache-2.0 license</a>
+    <p style="margin:.75rem auto 0">By <a href="https://github.com/bcollard">Baptiste Collard</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
