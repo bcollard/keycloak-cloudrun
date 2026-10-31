@@ -28,7 +28,7 @@ Request path:
 | Owner | Resources |
 |---|---|
 | Terraform (`*.tf`) | Global static IP, forwarding rules (:443, :80), HTTPS and HTTP proxies, URL maps, uploaded SSL certificate, backend service, serverless NEG, Cloud Run service and invoker binding, service account and IAM, Cloud SQL instance/database/user, VPC Access connector, Secret Manager secrets, Artifact Registry remote repo (ghcr.io proxy), project APIs |
-| GitHub Actions | Multi-arch image build, push to GHCR, cosign signing (`build-push.yml`); `terraform validate` (`terraform-validate.yml`); Dependabot for action pins |
+| GitHub Actions | Multi-arch image build, push to GHCR, cosign signing (`build-push.yml`); `terraform validate` (`terraform-validate.yml`); Renovate for action pins (Dependabot alerts stay on for security PRs) |
 | You, once | GCS state bucket, private services access on the VPC, DNS A record, wildcard certificate, Keycloak realm configuration |
 
 ## Prerequisites

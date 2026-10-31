@@ -27,15 +27,17 @@
 <rect x="415" y="90" width="360" height="496" rx="10" fill="#E6F4EA" stroke="#188038" stroke-width="1.5"/>
 <text x="433" y="122" font-size="17" font-weight="bold" fill="#188038">GitHub</text>
 <text x="433" y="156" font-size="13" font-weight="bold" fill="#202124">build-push.yml</text>
-<text x="441" y="178" font-size="13" fill="#3C4043">• Runs when KEYCLOAK_VERSION changes</text>
-<text x="441" y="200" font-size="13" fill="#3C4043">• Builds linux/amd64 + linux/arm64</text>
-<text x="441" y="222" font-size="13" fill="#3C4043">• Pushes to ghcr.io (public)</text>
-<text x="441" y="244" font-size="13" fill="#3C4043">• Signs with cosign (keyless)</text>
-<text x="433" y="274" font-size="13" font-weight="bold" fill="#202124">terraform-validate.yml</text>
-<text x="441" y="296" font-size="13" fill="#3C4043">• Runs on *.tf changes</text>
-<text x="441" y="318" font-size="13" fill="#3C4043">• terraform init -backend=false + validate</text>
-<text x="433" y="348" font-size="13" font-weight="bold" fill="#202124">dependabot.yml</text>
-<text x="441" y="370" font-size="13" fill="#3C4043">• Monthly bumps of SHA-pinned actions</text>
+<text x="441" y="178" font-size="13" fill="#3C4043">• Runs on KEYCLOAK_VERSION, Dockerfile,</text>
+<text x="455" y="200" font-size="13" fill="#3C4043">server/** or workflow changes, or manually</text>
+<text x="441" y="222" font-size="13" fill="#3C4043">• Builds linux/amd64 + linux/arm64</text>
+<text x="441" y="244" font-size="13" fill="#3C4043">• Pushes to ghcr.io (public)</text>
+<text x="441" y="266" font-size="13" fill="#3C4043">• Signs with cosign (keyless)</text>
+<text x="433" y="296" font-size="13" font-weight="bold" fill="#202124">terraform-validate.yml</text>
+<text x="441" y="318" font-size="13" fill="#3C4043">• Runs on *.tf changes</text>
+<text x="441" y="340" font-size="13" fill="#3C4043">• terraform init -backend=false + validate</text>
+<text x="433" y="370" font-size="13" font-weight="bold" fill="#202124">Renovate</text>
+<text x="441" y="392" font-size="13" fill="#3C4043">• Bumps SHA-pinned actions</text>
+<text x="455" y="414" font-size="13" fill="#3C4043">(uses Dependabot alerts for security PRs)</text>
 <rect x="800" y="90" width="360" height="496" rx="10" fill="#F1F3F4" stroke="#80868B" stroke-width="1.5" stroke-dasharray="6 4"/>
 <text x="818" y="122" font-size="17" font-weight="bold" fill="#80868B">Outside Terraform (one-time setup)</text>
 <text x="818" y="156" font-size="13" font-weight="bold" fill="#202124">GCP</text>
@@ -47,9 +49,11 @@
 <text x="826" y="296" font-size="13" fill="#3C4043">• Wildcard cert via lego DNS-01</text>
 <text x="840" y="318" font-size="13" fill="#3C4043">(make server-cert)</text>
 <text x="818" y="348" font-size="13" font-weight="bold" fill="#202124">Deploy</text>
-<text x="826" y="370" font-size="13" fill="#3C4043">• make tfa after each image or .tf change</text>
-<text x="840" y="392" font-size="13" fill="#3C4043">(CI does not run terraform apply)</text>
-<text x="818" y="422" font-size="13" font-weight="bold" fill="#202124">Keycloak</text>
-<text x="826" y="444" font-size="13" fill="#3C4043">• Realms, flows, passkeys: admin console</text>
-<text x="840" y="466" font-size="13" fill="#3C4043">or kcadm.sh / Admin REST API</text>
+<text x="826" y="370" font-size="13" fill="#3C4043">• New image: set keycloak_image_digest</text>
+<text x="840" y="392" font-size="13" fill="#3C4043">(make image-digest)</text>
+<text x="826" y="414" font-size="13" fill="#3C4043">• make tfa after each image or .tf change</text>
+<text x="840" y="436" font-size="13" fill="#3C4043">(CI does not run terraform apply)</text>
+<text x="818" y="466" font-size="13" font-weight="bold" fill="#202124">Keycloak</text>
+<text x="826" y="488" font-size="13" fill="#3C4043">• Realms, flows, passkeys: admin console</text>
+<text x="840" y="510" font-size="13" fill="#3C4043">or kcadm.sh / Admin REST API</text>
 </svg>

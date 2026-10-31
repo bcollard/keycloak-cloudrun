@@ -30,10 +30,11 @@ def box(x, y, w, h, style, title, sub=None, lines=None):
         for i, ln in enumerate(lines):
             o.append(f'<text x="{x + 14}" y="{y + 50 + i * 22}" font-size="13" fill="#3C4043" xml:space="preserve">{escape(ln)}</text>')
         return o
-    ty = y + h / 2 + (-4 if sub else 5)
+    subs = [sub] if isinstance(sub, str) else list(sub or [])
+    ty = y + h / 2 + (-4 - 8 * (len(subs) - 1) if subs else 5)
     o.append(f'<text x="{cx}" y="{ty}" font-size="15" font-weight="bold" fill="#202124" text-anchor="middle">{escape(title)}</text>')
-    if sub:
-        o.append(f'<text x="{cx}" y="{ty + 19}" font-size="12" fill="#5F6368" text-anchor="middle">{escape(sub)}</text>')
+    for i, s in enumerate(subs):
+        o.append(f'<text x="{cx}" y="{ty + 19 + i * 16}" font-size="12" fill="#5F6368" text-anchor="middle">{escape(s)}</text>')
     return o
 
 
@@ -76,7 +77,9 @@ def architecture():
     ])
     o += box(cx, 584, 205, 50, TF, "Backend service", "external managed")
     o += box(cx + 235, 584, 205, 50, TF, "Serverless NEG", "→ Cloud Run service")
-    o += box(cx, 674, cw, 70, TF, "Cloud Run: Keycloak 26", "1 instance · start --optimized · ingress: internal + load balancer")
+    o += box(cx, 674, cw, 70, TF, "Cloud Run: Keycloak 26", (
+        "1 instance · start --optimized · ingress: internal + load balancer",
+        "image pinned by digest · opt-in preview/experimental features"))
     o += box(cx, 784, 205, 56, TF, "Serverless VPC connector", "private ranges only")
     o += box(cx + 235, 784, 205, 56, TF, "Cloud SQL PostgreSQL 15", "private IP, no public IP")
 
@@ -118,17 +121,19 @@ def stack():
                             "Required project APIs"]),
         ]),
         (GH, "GitHub", [
-            ("build-push.yml", ["Runs when KEYCLOAK_VERSION changes", "Builds linux/amd64 + linux/arm64",
+            ("build-push.yml", ["Runs on KEYCLOAK_VERSION, Dockerfile,", "  server/** or workflow changes, or manually",
+                                "Builds linux/amd64 + linux/arm64",
                                 "Pushes to ghcr.io (public)", "Signs with cosign (keyless)"]),
             ("terraform-validate.yml", ["Runs on *.tf changes", "terraform init -backend=false + validate"]),
-            ("dependabot.yml", ["Monthly bumps of SHA-pinned actions"]),
+            ("Renovate", ["Bumps SHA-pinned actions", "  (uses Dependabot alerts for security PRs)"]),
         ]),
         (EXT, "Outside Terraform (one-time setup)", [
             ("GCP", ["GCS bucket for Terraform state", "Private services access on the VPC",
                      "  (needed by Cloud SQL private IP)"]),
             ("DNS and TLS", ["A record for the Keycloak hostname", "Wildcard cert via lego DNS-01",
                              "  (make server-cert)"]),
-            ("Deploy", ["make tfa after each image or .tf change", "  (CI does not run terraform apply)"]),
+            ("Deploy", ["New image: set keycloak_image_digest", "  (make image-digest)",
+                        "make tfa after each image or .tf change", "  (CI does not run terraform apply)"]),
             ("Keycloak", ["Realms, flows, passkeys: admin console", "  or kcadm.sh / Admin REST API"]),
         ]),
     ]
