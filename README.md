@@ -131,13 +131,6 @@ Since Keycloak 26.6, `token-exchange-standard:v2`, `jwt-authorization-grant:v1` 
 
 ![Direct grant flow](docs/img/admin-realm-authentication-flows-direct-grant.png)
 
-### VS Code as an MCP client
-
-- Add the `openid` scope to the client's default scopes.
-- The client requests `openid`, `phone`, `address`, `offline_access`, `organization`, `profile`, `email` and `microprofile-jwt`.
-- Raise the access token lifespan to 30 minutes, to tolerate clock skew between the workstation and Cloud Run.
-- Add an **Audience** mapper to the client: add to access token ON, include client audience ON. The upstream issue for dynamic audiences is [keycloak/keycloak#41526](https://github.com/keycloak/keycloak/issues/41526).
-
 ## Files
 
 | File | Purpose |
@@ -169,3 +162,7 @@ Since Keycloak 26.6, `token-exchange-standard:v2`, `jwt-authorization-grant:v1` 
 - [Serverless NEGs for Cloud Run](https://cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts)
 - [Cloud Run ingress settings](https://cloud.google.com/run/docs/securing/ingress)
 - [Deploying Keycloak on Cloud Run (French)](https://blog.ineat-group.com/2023/09/deployer-keycloak-sous-cloudrun/)
+
+## License
+
+[Apache-2.0](LICENSE)
