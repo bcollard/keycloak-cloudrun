@@ -46,6 +46,7 @@
   :root {
     --accent:   #0b5fd1;
     --accent-d: #084aa3;
+    --on-accent: #ffffff;
     --ink:      #14161a;
     --muted:    #566070;
     --line:     #dbe2ec;
@@ -62,6 +63,7 @@
     :root {
       --accent:   #5aa2ff;
       --accent-d: #8abdff;
+      --on-accent: #0b1220;
       --ink:      #e9eef6;
       --muted:    #9aa6b6;
       --line:     #2a3342;
@@ -71,7 +73,7 @@
       --hl-cmd:   #d2a8ff;
       --hl-var:   #79c0ff;
       --hl-str:   #7ee787;
-      --hl-cmt:   #8b949e;
+      --hl-cmt:   #9ea7b1;
     }
   }
 
@@ -126,8 +128,8 @@
     text-decoration: none;
     border: 1px solid var(--accent);
   }
-  .btn-primary { background: var(--accent); color: #fff }
-  .btn-primary:hover { background: var(--accent-d); border-color: var(--accent-d); color: #fff }
+  .btn-primary { background: var(--accent); color: var(--on-accent) }
+  .btn-primary:hover { background: var(--accent-d); border-color: var(--accent-d); color: var(--on-accent) }
   .btn-ghost { color: var(--accent); background: transparent }
   .note { font-size: .85rem; color: var(--muted); margin-top: 1rem }
 
