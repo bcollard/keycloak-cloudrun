@@ -1,0 +1,26 @@
+name: Release
+
+# Push a tag like v1.1.0 to publish a GitHub release with generated notes.
+# The tag versions the Terraform stack. The container image keeps its own
+# tags (the Keycloak version), built by build-push.yml.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          keycloak=$(tr -d ' \t\r\n' < KEYCLOAK_VERSION)
+          gh release create "$TAG" --verify-tag --generate-notes --title "$TAG" \
+            --notes "Keycloak ${keycloak} (image \`ghcr.io/${GITHUB_REPOSITORY}:${keycloak}\`)."

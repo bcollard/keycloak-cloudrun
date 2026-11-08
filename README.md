@@ -5,6 +5,7 @@ Terraform and a container build for running Keycloak 26 on Cloud Run, behind a G
 - The container image is built by GitHub Actions and published to `ghcr.io/bcollard/keycloak-cloudrun`. It is public and signed with cosign.
 - Terraform deploys the rest: Cloud Run, Cloud SQL, secrets, the load balancer and its supporting resources.
 - `terraform apply` is run by hand. CI does not deploy.
+- The Terraform stack is versioned with git tags (`v1.0.0`, ...), each with a [GitHub release](https://github.com/bcollard/keycloak-cloudrun/releases). Clone a tag to pin a version: `git clone --branch v1.0.0 https://github.com/bcollard/keycloak-cloudrun.git`.
 
 ## Architecture
 
@@ -28,7 +29,7 @@ Request path:
 | Owner | Resources |
 |---|---|
 | Terraform (`*.tf`) | Global static IP, forwarding rules (:443, :80), HTTPS and HTTP proxies, URL maps, uploaded SSL certificate, backend service, serverless NEG, Cloud Run service and invoker binding, service account and IAM, Cloud SQL instance/database/user, VPC Access connector, Secret Manager secrets, Artifact Registry remote repo (ghcr.io proxy), project APIs |
-| GitHub Actions | Multi-arch image build, push to GHCR, cosign signing (`build-push.yml`); `terraform validate` (`terraform-validate.yml`); Renovate for action pins (Dependabot alerts stay on for security PRs) |
+| GitHub Actions | Multi-arch image build, push to GHCR, cosign signing (`build-push.yml`); `terraform validate` (`terraform-validate.yml`); GitHub release for each `vX.Y.Z` tag (`release.yml`); Renovate for action pins (Dependabot alerts stay on for security PRs) |
 | You, once | GCS state bucket, private services access on the VPC, DNS A record, TLS certificate, Keycloak realm configuration |
 
 ## Prerequisites
