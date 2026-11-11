@@ -20,7 +20,7 @@ variable "gcp_zone" {
 variable "keycloak_version" {
   description = "The version of Keycloak to deploy"
   type        = string
-  default     = "26.6.2"
+  default     = "26.8.2"
 }
 
 variable "keycloak_image_digest" {
